@@ -10,8 +10,25 @@ import {
   PlaneLanding
 } from "lucide-react";
 
+// Define proper TypeScript interfaces for our data
+interface Airport {
+  airport: string;
+  time: string;
+  terminal: string;
+}
+
+interface Flight {
+  id: string;
+  flightNumber: string;
+  departure: Airport;
+  arrival: Airport;
+  duration: string;
+  aircraft: string;
+  status: "active" | "upcoming" | "completed" | string;
+}
+
 // Sample data - would come from an API in a real app
-const upcomingFlights = [
+const upcomingFlights: Flight[] = [
   {
     id: "1",
     flightNumber: "SU-1492",
@@ -65,7 +82,7 @@ const upcomingFlights = [
   }
 ];
 
-const pastFlights = [
+const pastFlights: Flight[] = [
   {
     id: "4",
     flightNumber: "SU-1703",
@@ -104,24 +121,33 @@ const pastFlights = [
 
 // Helper function to format date
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString; // Return original string if formatting fails
+  }
 };
 
-// Flight card component
-const FlightCard = ({ flight }: { flight: any }) => {
+// Flight card component with proper typing
+const FlightCard = ({ flight }: { flight: Flight }) => {
   return (
-    <Card key={flight.id} className="mb-4 hover-card">
+    <Card className="mb-4 hover:shadow-md transition-all duration-200">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div className="mr-4 p-2 bg-primary/10 rounded-full">
-              <PlaneTakeoff className="h-6 w-6 text-primary" />
+              {flight.status === "completed" ? (
+                <PlaneLanding className="h-6 w-6 text-primary" />
+              ) : (
+                <PlaneTakeoff className="h-6 w-6 text-primary" />
+              )}
             </div>
             <div>
               <h3 className="font-bold text-lg">{flight.flightNumber}</h3>
