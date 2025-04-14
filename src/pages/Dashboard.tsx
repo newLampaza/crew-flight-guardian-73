@@ -30,10 +30,38 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-3xl font-bold tracking-tight">
-        Добро пожаловать, {user?.name}
-      </h1>
-      
+      {/* Employee Profile Section */}
+      <div className="mb-8">
+        <Card className="hover-card bg-gradient-to-br from-sidebar-primary/10 to-sidebar/5">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2 text-center md:text-left">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Добро пожаловать, {user?.name}
+                </h1>
+                <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-muted-foreground">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <PlaneTakeoff className="h-4 w-4" />
+                    <span>{user?.position}</span>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>{user?.role}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Statistics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Flight Statistics */}
         <Card className="hover-card">
