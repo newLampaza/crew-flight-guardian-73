@@ -187,11 +187,6 @@ body.dark-login {
     @apply flex items-center justify-between;
   }
   
-  /* Tooltip styles for truncated text */
-  .truncate-with-tooltip {
-    @apply truncate relative cursor-help;
-  }
-  
   /* Исправления для адаптивного отображения текста и статусов */
   .crew-name {
     @apply font-medium truncate max-w-[60%] sm:max-w-[65%];
