@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -107,6 +108,11 @@
   }
 }
 
+/* Особые стили для страницы входа в темной теме */
+body.dark-login {
+  background-color: hsl(222.2 84% 4.9%);
+}
+
 /* Status Indicators */
 .status-indicator {
   @apply h-3 w-3 rounded-full inline-block mr-2;
@@ -179,5 +185,23 @@
   
   .flex-between {
     @apply flex items-center justify-between;
+  }
+  
+  /* Исправления для адаптивного отображения текста и статусов */
+  .crew-name {
+    @apply font-medium truncate max-w-[60%] sm:max-w-[65%];
+  }
+  
+  .crew-position {
+    @apply text-sm text-muted-foreground truncate max-w-[40%] sm:max-w-[35%];
+  }
+  
+  .status-text {
+    @apply whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px] sm:max-w-full;
+  }
+  
+  /* Более компактное отображение для мобильных устройств */
+  .compact-mobile {
+    @apply flex-col sm:flex-row text-center sm:text-left;
   }
 }

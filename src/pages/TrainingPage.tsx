@@ -76,6 +76,12 @@ const MaterialCard = ({ material }: { material: any }) => {
     console.log(`Opening material: ${material.title}`);
   };
   
+  const statusText = {
+    "completed": "Изучено",
+    "in-progress": "В процессе",
+    "not-started": "Не начато"
+  };
+  
   return (
     <Card key={material.id} className="mb-4 hover-card">
       <CardHeader className="pb-2">
@@ -86,7 +92,7 @@ const MaterialCard = ({ material }: { material: any }) => {
             ) : (
               <Video className="h-5 w-5 text-primary" />
             )}
-            {material.title}
+            <span className="truncate">{material.title}</span>
           </CardTitle>
           
           <Badge
@@ -95,10 +101,9 @@ const MaterialCard = ({ material }: { material: any }) => {
               material.status === "in-progress" ? "secondary" :
               "outline"
             }
+            className="whitespace-nowrap ml-2 min-w-[90px] text-center"
           >
-            {material.status === "completed" ? "Изучено" :
-             material.status === "in-progress" ? "В процессе" :
-             "Не начато"}
+            {statusText[material.status as keyof typeof statusText]}
           </Badge>
         </div>
         <CardDescription>{material.description}</CardDescription>
@@ -216,15 +221,15 @@ const TrainingPage = () => {
               <div className="flex flex-col space-y-3">
                 <Button variant="ghost" className="justify-start">
                   <FileText className="mr-2 h-4 w-4" />
-                  Управление ресурсами экипажа
+                  <span className="truncate">Управление ресурсами экипажа</span>
                 </Button>
                 <Button variant="ghost" className="justify-start">
                   <Video className="mr-2 h-4 w-4" />
-                  Новые процедуры безопасности
+                  <span className="truncate">Новые процедуры безопасности</span>
                 </Button>
                 <Button variant="ghost" className="justify-start">
                   <FileText className="mr-2 h-4 w-4" />
-                  Техники управления стрессом
+                  <span className="truncate">Техники управления стрессом</span>
                 </Button>
               </div>
             </CardContent>

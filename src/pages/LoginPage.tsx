@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaneTakeoff } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -13,6 +14,19 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+
+  // Для обнаружения текущей темы при загрузке страницы
+  useEffect(() => {
+    // Проверяем текущую тему при монтировании компонента
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    document.body.classList.toggle('dark-login', isDarkMode);
+    
+    // Очистка при размонтировании
+    return () => {
+      document.body.classList.remove('dark-login');
+    };
+  }, [theme]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +41,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100">
+    <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="w-full max-w-md p-4">
-        <Card className="w-full shadow-lg">
+        <Card className="w-full shadow-lg border-border">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
               <div className="bg-primary p-3 rounded-full">

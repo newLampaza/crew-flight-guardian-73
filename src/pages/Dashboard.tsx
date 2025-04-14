@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Users, 
@@ -8,8 +9,12 @@ import {
   Clock, 
   Brain, 
   Stethoscope, 
-  Battery 
+  Battery,
+  Activity,
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 // Sample data - in a real app this would come from an API
 const crewData = [
@@ -108,8 +113,8 @@ const Dashboard = () => {
             <div className="space-y-3">
               {crewData.map(member => (
                 <div key={member.id} className="flex justify-between items-center">
-                  <span className="font-medium">{member.name}</span>
-                  <span className="text-sm text-muted-foreground">{member.position}</span>
+                  <span className="crew-name">{member.name}</span>
+                  <span className="crew-position">{member.position}</span>
                 </div>
               ))}
             </div>
@@ -149,25 +154,33 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Тест внимания</span>
-                <span className="ml-auto font-bold text-status-good">Пройден</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Тест внимания</span>
+                </div>
+                <span className="font-bold text-status-good status-text">Пройден</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Тест реакции</span>
-                <span className="ml-auto font-bold text-status-good">Пройден</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Тест реакции</span>
+                </div>
+                <span className="font-bold text-status-good status-text">Пройден</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-warning"></span>
-                <span>Тест памяти</span>
-                <span className="ml-auto font-bold text-status-warning">Требуется повторный тест</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-warning"></span>
+                  <span>Тест памяти</span>
+                </div>
+                <span className="font-bold text-status-warning status-text">Требуется повторный тест</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-danger"></span>
-                <span>Тест когнитивной гибкости</span>
-                <span className="ml-auto font-bold text-status-danger">Не пройден</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-danger"></span>
+                  <span>Тест когнитивной гибкости</span>
+                </div>
+                <span className="font-bold text-status-danger status-text">Не пройден</span>
               </div>
             </div>
           </CardContent>
@@ -183,31 +196,39 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Допуск к полетам</span>
-                <span className="ml-auto font-bold text-status-good">Разрешен</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Допуск к полетам</span>
+                </div>
+                <span className="font-bold text-status-good status-text">Разрешен</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Дата медосмотра</span>
-                <span className="ml-auto font-bold">10.04.2025</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Дата медосмотра</span>
+                </div>
+                <span className="font-bold status-text">10.04.2025</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Следующий осмотр</span>
-                <span className="ml-auto font-bold">10.10.2025</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Следующий осмотр</span>
+                </div>
+                <span className="font-bold status-text">10.10.2025</span>
               </div>
-              <div className="flex items-center">
-                <span className="status-indicator status-good"></span>
-                <span>Врач</span>
-                <span className="ml-auto font-bold">Петров А.И.</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Врач</span>
+                </div>
+                <span className="font-bold status-text">Петров А.И.</span>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        {/* Fatigue Analysis */}
+        {/* Fatigue Analysis - улучшенная версия */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-xl flex items-center gap-2">
@@ -220,6 +241,38 @@ const Dashboard = () => {
               <div className="flex flex-col items-center">
                 <div className="mb-2 text-5xl font-bold text-status-warning">65%</div>
                 <div className="text-sm text-muted-foreground">Средний уровень усталости</div>
+              </div>
+              
+              <div className="bg-amber-50 dark:bg-amber-500/10 p-3 rounded-lg mb-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Превышение нормы</p>
+                    <p className="text-xs text-muted-foreground">Рекомендуется дополнительный отдых перед следующим рейсом</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center pt-1">
+                <div className="flex items-center">
+                  <Activity className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-sm">Динамика за неделю</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <span className="text-rose-500 mr-1">+5%</span>
+                  <div className="w-16 h-2 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-rose-500 rounded-full" style={{width: "60%"}}></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center pt-1">
+                <Link to="/fatigue-analysis">
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    Подробный анализ
+                    <ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>
