@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -79,6 +80,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const { theme, setTheme } = useTheme();
 
+  // Функция переключения темы с проверкой актуального состояния
+  const toggleTheme = () => {
+    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    setTheme(currentTheme === "dark" ? "light" : "dark");
+  };
+
   return (
     <div className="flex min-h-screen bg-background relative">
       {/* Backdrop blur when sidebar is open */}
@@ -145,9 +152,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                onClick={toggleTheme}
               >
-                {theme === "dark" ? (
+                {document.documentElement.classList.contains('dark') ? (
                   <Sun className="h-5 w-5" />
                 ) : (
                   <Moon className="h-5 w-5" />
