@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/components/theme-provider";
 import {
   PlaneTakeoff,
   LayoutDashboard,
@@ -14,7 +14,9 @@ import {
   LineChart,
   Settings,
   Menu,
-  X
+  X,
+  Moon,
+  Sun
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -75,8 +77,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     setSidebarOpen(false);
   };
 
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div className="flex min-h-screen bg-slate-50 relative">
+    <div className="flex min-h-screen bg-background relative">
       {/* Backdrop blur when sidebar is open */}
       {sidebarOpen && (
         <div 
@@ -126,7 +130,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white shadow-sm z-10">
+        <header className="bg-card shadow-sm z-10">
           <div className="flex h-16 items-center justify-between px-4">
             <Button 
               variant="ghost" 
@@ -136,10 +140,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             >
               <Menu className="h-5 w-5" />
             </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-auto p-4 lg:p-6 bg-background">
           {children}
         </main>
       </div>
@@ -148,4 +166,3 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 };
 
 export default DashboardLayout;
-
