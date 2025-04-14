@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +8,14 @@ import {
   PlaneTakeoff, 
   PlaneLanding
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Define proper TypeScript interfaces for our data
 interface Airport {
   airport: string;
   time: string;
@@ -27,7 +32,6 @@ interface Flight {
   status: "active" | "upcoming" | "completed" | string;
 }
 
-// Sample data - would come from an API in a real app
 const upcomingFlights: Flight[] = [
   {
     id: "1",
@@ -119,7 +123,6 @@ const pastFlights: Flight[] = [
   }
 ];
 
-// Helper function to format date
 const formatDate = (dateString: string) => {
   try {
     const date = new Date(dateString);
@@ -135,8 +138,9 @@ const formatDate = (dateString: string) => {
   }
 };
 
-// Flight card component with proper typing
 const FlightCard = ({ flight }: { flight: Flight }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <Card className="mb-4 hover:shadow-md transition-all duration-200">
       <CardContent className="p-6">
@@ -173,10 +177,19 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
               <Clock className="h-4 w-4 mr-1" />
               {formatDate(flight.departure.time)}
             </div>
-            <div className="flex items-center mt-1">
-              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.departure.airport}</span>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center mt-1">
+                    <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>{flight.departure.airport}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{flight.departure.airport}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <div className="text-xs text-muted-foreground mt-1">
               Терминал {flight.departure.terminal}
             </div>
@@ -196,10 +209,19 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
               <Clock className="h-4 w-4 mr-1" />
               {formatDate(flight.arrival.time)}
             </div>
-            <div className="flex items-center justify-end mt-1">
-              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.arrival.airport}</span>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-end mt-1">
+                    <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>{flight.arrival.airport}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{flight.arrival.airport}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <div className="text-xs text-muted-foreground mt-1">
               Терминал {flight.arrival.terminal}
             </div>

@@ -187,7 +187,7 @@ body.dark-login {
     @apply flex items-center justify-between;
   }
   
-  /* Исправления для адаптивного отображения текста и статусов */
+  /* Styles for desktop with truncation */
   .crew-name {
     @apply font-medium truncate max-w-[60%] sm:max-w-[65%];
   }
@@ -198,6 +198,16 @@ body.dark-login {
   
   .status-text {
     @apply whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px] sm:max-w-full;
+  }
+  
+  /* Custom tooltip styles */
+  .tooltip {
+    @apply invisible absolute z-50 bg-black/80 text-white text-xs rounded p-2 whitespace-nowrap;
+    pointer-events: none;
+  }
+  
+  .tooltip-trigger:hover .tooltip {
+    @apply visible;
   }
   
   /* Более компактное отображение для мобильных устройств */
