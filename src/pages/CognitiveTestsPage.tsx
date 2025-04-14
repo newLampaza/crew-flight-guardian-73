@@ -112,10 +112,12 @@ const CognitiveTestsPage = () => {
     
     // Имитация результата теста
     const test = availableTests.find(t => t.id === activeTest);
-    setTestResult({
-      ...test?.lastResult,
-      date: new Date().toLocaleDateString('ru-RU')
-    });
+    if (test && test.lastResult) {
+      setTestResult({
+        ...test.lastResult,
+        date: new Date().toLocaleDateString('ru-RU')
+      });
+    }
     
     toast({
       title: "Тест завершен",
@@ -134,8 +136,10 @@ const CognitiveTestsPage = () => {
   // Посмотреть детали результата
   const viewTestDetails = (testId: string) => {
     const test = availableTests.find(t => t.id === testId);
-    setTestResult(test?.lastResult);
-    setShowResultDetails(true);
+    if (test && test.lastResult) {
+      setTestResult(test.lastResult);
+      setShowResultDetails(true);
+    }
   };
   
   // Получить цвет статуса
@@ -263,8 +267,8 @@ const CognitiveTestsPage = () => {
                   <Progress value={test.lastResult.score} className="h-2" />
                 </div>
                 
-                {test.lastResult.errors.length > 0 && (
-                  <Alert variant={test.lastResult.status === "warning" ? "default" : "destructive"}>
+                {test.lastResult.errors && test.lastResult.errors.length > 0 && (
+                  <Alert variant={test.lastResult.status === "warning" ? "warning" : "destructive"}>
                     <AlertTitle>Обнаружены ошибки</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc list-inside text-sm mt-2">
@@ -328,8 +332,8 @@ const CognitiveTestsPage = () => {
                   </div>
                 </div>
                 
-                {testResult.errors.length > 0 && (
-                  <Alert variant={testResult.status === "warning" ? "default" : "destructive"}>
+                {testResult.errors && testResult.errors.length > 0 && (
+                  <Alert variant={testResult.status === "warning" ? "warning" : "destructive"}>
                     <AlertTitle>Обнаружены ошибки</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc list-inside text-sm mt-2">
@@ -393,7 +397,7 @@ const CognitiveTestsPage = () => {
                 <Progress value={testResult.score} className="h-2" />
               </div>
               
-              {testResult.errors.length > 0 && (
+              {testResult.errors && testResult.errors.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-medium">Обнаруженные проблемы:</h4>
                   <ul className="list-disc list-inside text-sm space-y-1">
