@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   LineChart as LineChartIcon,
@@ -15,10 +13,11 @@ import {
   AlertCircle,
   CheckCircle,
   Battery,
-  ThumbsUp,
-  ThumbsDown,
   Star,
-  Loader
+  Loader,
+  Zap,
+  BrainCircuit,
+  Scan
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -31,10 +30,17 @@ import {
   Legend,
   ResponsiveContainer,
   BarChart as RechartBarChart,
-  Bar
+  Bar,
+  Area,
+  AreaChart,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 // Sample data for charts
 const monthlyFatigueData = [
@@ -52,14 +58,19 @@ const monthlyFatigueData = [
 ];
 
 const flightTypeData = [
-  { name: "Короткие", fatigue: 45 },
-  { name: "Средние", fatigue: 60 },
-  { name: "Дальние", fatigue: 75 }
+  { name: "Короткие", fatigue: 45, fill: "#38bdf8" },
+  { name: "Средние", fatigue: 60, fill: "#0ea5e9" },
+  { name: "Дальние", fatigue: 75, fill: "#0369a1" }
+];
+
+const statusBreakdown = [
+  { name: "Нормальный", value: 60, color: "hsl(var(--status-good))" },
+  { name: "Повышенный", value: 25, color: "hsl(var(--status-warning))" },
+  { name: "Критический", value: 15, color: "hsl(var(--status-danger))" }
 ];
 
 const FatigueAnalysisPage = () => {
   const [isRealTimeAnalysisActive, setIsRealTimeAnalysisActive] = useState(false);
-  const [aiRating, setAiRating] = useState<string | null>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({
     id: "A-22042025-1492",
@@ -79,20 +90,12 @@ const FatigueAnalysisPage = () => {
       toast({
         title: "Анализ завершен",
         description: "Анализ усталости в реальном времени завершен",
+        variant: "success"
       });
       
       // Show results dialog
       setShowResultDialog(true);
     }, 3000);
-  };
-  
-  const handleAiFeedback = (rating: string) => {
-    setAiRating(rating);
-    
-    toast({
-      title: "Оценка записана",
-      description: "Спасибо за вашу оценку алгоритма",
-    });
   };
   
   const handleStarRating = (rating: number) => {
@@ -106,6 +109,12 @@ const FatigueAnalysisPage = () => {
     if (level < 50) return "text-status-good";
     if (level < 70) return "text-status-warning";
     return "text-status-danger";
+  };
+
+  const getFatigueStatusBg = (level: number) => {
+    if (level < 50) return "var(--status-good)";
+    if (level < 70) return "var(--status-warning)";
+    return "var(--status-danger)";
   };
   
   return (
@@ -193,25 +202,52 @@ const FatigueAnalysisPage = () => {
               
               <TabsContent value="monthly" className="animate-fade-in">
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
+                  <ChartContainer 
+                    className="h-full" 
+                    config={{
+                      fatigue: {
+                        theme: {
+                          light: "#0ea5e9",
+                          dark: "#38bdf8"
+                        }
+                      }
+                    }}
+                  >
+                    <AreaChart
                       data={monthlyFatigueData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
+                      <defs>
+                        <linearGradient id="colorFatigue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-fatigue)" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="var(--color-fatigue)" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12 }}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickMargin={10}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                      />
+                      <Area 
                         type="monotone" 
                         dataKey="fatigue" 
-                        name="Общая усталость" 
-                        stroke="#0ea5e9" 
-                        strokeWidth={2} 
+                        name="Усталость" 
+                        stroke="var(--color-fatigue)" 
+                        fillOpacity={1} 
+                        fill="url(#colorFatigue)" 
+                        strokeWidth={2}
+                        activeDot={{ r: 6, strokeWidth: 0 }}
                       />
-                    </LineChart>
-                  </ResponsiveContainer>
+                    </AreaChart>
+                  </ChartContainer>
                 </div>
               </TabsContent>
             </Tabs>
@@ -229,19 +265,21 @@ const FatigueAnalysisPage = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-center">
                 <div 
-                  className="h-36 w-36 rounded-full flex items-center justify-center relative transition-all duration-500"
+                  className="h-36 w-36 rounded-full flex items-center justify-center relative transition-all duration-500 overflow-hidden"
                   style={{
                     background: `conic-gradient(hsl(var(--status-warning)) 65%, #f3f4f6 0)`
                   }}
                 >
-                  <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center flex-col">
-                    <span className="text-3xl font-bold">65%</span>
-                    <span className="text-xs text-muted-foreground">Усталость</span>
+                  <div className="h-32 w-32 rounded-full bg-background flex items-center justify-center flex-col">
+                    <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center flex-col">
+                      <span className="text-3xl font-bold">65%</span>
+                      <span className="text-xs text-muted-foreground">Усталость</span>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center border-t pt-4">
+              <div className="flex justify-between items-center border-t pt-4 mt-2">
                 <div className="text-center">
                   <div className="text-sm font-medium">Предупреждения</div>
                   <div className="flex items-center justify-center mt-2">
@@ -274,59 +312,104 @@ const FatigueAnalysisPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px]">
+              <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartBarChart
                     data={flightTypeData}
-                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                    margin={{ top: 15, right: 10, left: 0, bottom: 10 }}
+                    barSize={30}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="fatigue" name="Уровень усталости" fill="hsl(var(--primary))" />
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.4} vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 12 }}
+                      tickMargin={10}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickMargin={10}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(0, 0, 0, 0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                    />
+                    <Bar 
+                      dataKey="fatigue" 
+                      name="Уровень усталости" 
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {flightTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
                   </RechartBarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="transition-all duration-300 hover:shadow-md">
+          <Card className="transition-all duration-300 hover:shadow-md overflow-hidden">
             <CardHeader>
-              <CardTitle>Оценка алгоритма</CardTitle>
-              <CardDescription>
-                Помогите улучшить алгоритм анализа усталости
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-primary" />
+                Распределение статусов
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Оцените точность анализа вашей усталости:
-              </p>
-              
-              <RadioGroup value={aiRating || ""} className="flex">
-                <div className="flex items-center space-x-2 mr-4">
-                  <RadioGroupItem 
-                    value="accurate" 
-                    id="r1" 
-                    onClick={() => handleAiFeedback("accurate")}
-                  />
-                  <Label htmlFor="r1" className="flex items-center">
-                    <ThumbsUp className="h-4 w-4 mr-1" />
-                    Точно
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem 
-                    value="inaccurate" 
-                    id="r2" 
-                    onClick={() => handleAiFeedback("inaccurate")}
-                  />
-                  <Label htmlFor="r2" className="flex items-center">
-                    <ThumbsDown className="h-4 w-4 mr-1" />
-                    Неточно
-                  </Label>
-                </div>
-              </RadioGroup>
+            <CardContent>
+              <div className="h-[180px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                      nameKey="name"
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                        return percent > 0.15 ? (
+                          <text
+                            x={x}
+                            y={y}
+                            fill="#ffffff"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={12}
+                            fontWeight="bold"
+                          >
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        ) : null;
+                      }}
+                    >
+                      {statusBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => [`${value}%`, 'Распределение']}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(0, 0, 0, 0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                    />
+                    <Legend 
+                      layout="horizontal" 
+                      align="center" 
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      iconSize={8}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -338,15 +421,40 @@ const FatigueAnalysisPage = () => {
       }}>
         <AlertDialogContent className="max-w-md">
           {isRealTimeAnalysisActive ? (
-            <div className="py-10 flex flex-col items-center justify-center space-y-4">
-              <div className="relative w-24 h-24">
-                <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-25"></div>
-                <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <div className="py-10 flex flex-col items-center justify-center space-y-8">
+              <div className="relative w-40 h-40">
+                <div className="animate-pulse absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full opacity-30"></div>
+                <div className="absolute inset-0 rounded-full border-8 border-primary border-opacity-20"></div>
+                <div className="absolute inset-0 rounded-full border-8 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                
+                <div className="absolute inset-0 flex items-center justify-center flex-col space-y-2">
+                  <BrainCircuit className="h-16 w-16 text-primary animate-pulse" />
+                  <Scan className="h-8 w-8 text-primary/70" />
+                </div>
               </div>
-              <h2 className="text-xl font-semibold text-center">Анализ видео...</h2>
-              <p className="text-center text-muted-foreground">
-                Пожалуйста, подождите. Нейросеть анализирует признаки усталости
-              </p>
+              
+              <div className="space-y-2 text-center">
+                <h2 className="text-xl font-semibold">Анализ видео...</h2>
+                <p className="text-muted-foreground">
+                  Нейросеть анализирует признаки усталости
+                </p>
+                
+                <div className="flex items-center justify-center space-x-1 pt-2">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                </div>
+              </div>
+              
+              <Alert variant="info" className="bg-blue-50/50 border-blue-100">
+                <AlertTitle className="flex items-center">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Обработка данных
+                </AlertTitle>
+                <AlertDescription>
+                  Алгоритм нейросети анализирует более 30 признаков усталости, включая мимику, движения глаз и положение головы.
+                </AlertDescription>
+              </Alert>
             </div>
           ) : (
             <>
@@ -365,18 +473,50 @@ const FatigueAnalysisPage = () => {
                   </div>
                   
                   <div className="mt-4 flex items-center justify-center">
-                    <div 
-                      className="h-32 w-32 rounded-full flex items-center justify-center relative transition-all duration-500"
-                      style={{
-                        background: `conic-gradient(hsl(var(--${analysisResult.level < 50 ? 'status-good' : analysisResult.level < 70 ? 'status-warning' : 'status-danger'})) ${analysisResult.level}%, #f3f4f6 0)`
-                      }}
-                    >
-                      <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center flex-col">
-                        <span className={`text-2xl font-bold ${getFatigueStatusColor(analysisResult.level)}`}>
+                    <div className="relative w-40 h-40">
+                      <svg className="w-full h-full" viewBox="0 0 100 100">
+                        <circle 
+                          cx="50" 
+                          cy="50" 
+                          r="45" 
+                          fill="none" 
+                          stroke="#f3f4f6" 
+                          strokeWidth="10"
+                        />
+                        <circle 
+                          cx="50" 
+                          cy="50" 
+                          r="45" 
+                          fill="none" 
+                          stroke={`hsl(${getFatigueStatusBg(analysisResult.level)})`}
+                          strokeWidth="10" 
+                          strokeDasharray={`${analysisResult.level * 2.83} 283`}
+                          strokeDashoffset="0" 
+                          strokeLinecap="round" 
+                          transform="rotate(-90 50 50)"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                        <text 
+                          x="50" 
+                          y="45" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle" 
+                          className={`${getFatigueStatusColor(analysisResult.level)} text-3xl font-bold`}
+                          style={{ fontSize: '18px' }}
+                        >
                           {analysisResult.level}%
-                        </span>
-                        <span className="text-xs text-muted-foreground">Усталость</span>
-                      </div>
+                        </text>
+                        <text 
+                          x="50" 
+                          y="60" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle" 
+                          className="text-xs text-muted-foreground"
+                          style={{ fontSize: '10px' }}
+                        >
+                          Усталость
+                        </text>
+                      </svg>
                     </div>
                   </div>
                   
