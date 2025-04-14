@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -129,10 +130,10 @@ const Dashboard = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className={isMobile ? "flex items-center" : "flex items-center status-text"}>
+                            <div className="flex items-center">
                               <span className={`status-indicator ${member.status === "good" ? "status-good" : member.status === "warning" ? "status-warning" : "status-danger"}`} />
-                              <span className={isMobile ? "text-xs" : ""}>
-                                {isMobile ? member.statusText : member.statusText}
+                              <span className={isMobile ? "text-xs" : "text-xs status-text"}>
+                                {member.statusText}
                               </span>
                             </div>
                           </TooltipTrigger>
@@ -186,8 +187,8 @@ const Dashboard = () => {
                   <TooltipTrigger asChild>
                     <div className="flex items-center mt-4 text-status-warning">
                       <AlertTriangle className="h-4 w-4 mr-2" />
-                      <span className={isMobile ? "text-sm" : "text-sm status-text"}>
-                        {isMobile ? "Требуется повторное тестирование" : "Требуется повторный тест"}
+                      <span className="text-sm">
+                        {currentUser.statusText}
                       </span>
                     </div>
                   </TooltipTrigger>

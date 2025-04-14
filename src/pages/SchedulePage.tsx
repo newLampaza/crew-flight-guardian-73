@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -158,17 +159,30 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
               <p className="text-sm text-muted-foreground">{flight.aircraft}</p>
             </div>
           </div>
-          <Badge
-            variant={
-              flight.status === "active" ? "default" :
-              flight.status === "upcoming" ? "secondary" :
-              flight.status === "completed" ? "outline" : "outline"
-            }
-          >
-            {flight.status === "active" ? "В полёте" :
-             flight.status === "upcoming" ? "Предстоящий" :
-             flight.status === "completed" ? "Выполнен" : flight.status}
-          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant={
+                    flight.status === "active" ? "default" :
+                    flight.status === "upcoming" ? "secondary" :
+                    flight.status === "completed" ? "outline" : "outline"
+                  }
+                >
+                  {flight.status === "active" ? "В полёте" :
+                  flight.status === "upcoming" ? "Предстоящий" :
+                  flight.status === "completed" ? "Выполнен" : flight.status}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {flight.status === "active" ? "Рейс в процессе выполнения" : 
+                  flight.status === "upcoming" ? "Предстоящий рейс" : 
+                  flight.status === "completed" ? "Выполненный рейс" : flight.status}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
@@ -182,7 +196,9 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
                 <TooltipTrigger asChild>
                   <div className="flex items-center mt-1">
                     <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>{flight.departure.airport}</span>
+                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>
+                      {flight.departure.airport}
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -214,7 +230,9 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
                 <TooltipTrigger asChild>
                   <div className="flex items-center justify-end mt-1">
                     <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>{flight.arrival.airport}</span>
+                    <span className={isMobile ? "" : "truncate max-w-[120px]"}>
+                      {flight.arrival.airport}
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>

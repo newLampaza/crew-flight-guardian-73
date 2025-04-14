@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,9 +84,9 @@ const MaterialCard = ({ material }: { material: any }) => {
   };
   
   const statusText = {
-    "completed": isMobile ? "Изучено" : "Изучено",
-    "in-progress": isMobile ? "В процессе изучения" : "В процессе",
-    "not-started": isMobile ? "Не начато обучение" : "Не начато"
+    "completed": "Изучено",
+    "in-progress": "В процессе изучения",
+    "not-started": "Не начато обучение"
   };
   
   return (
@@ -101,7 +102,7 @@ const MaterialCard = ({ material }: { material: any }) => {
                   ) : (
                     <Video className="h-5 w-5 text-primary" />
                   )}
-                  <span className={isMobile ? "" : "truncate"}>{material.title}</span>
+                  <span className="truncate">{material.title}</span>
                 </CardTitle>
               </TooltipTrigger>
               <TooltipContent>
@@ -110,16 +111,28 @@ const MaterialCard = ({ material }: { material: any }) => {
             </Tooltip>
           </TooltipProvider>
           
-          <Badge
-            variant={
-              material.status === "completed" ? "default" :
-              material.status === "in-progress" ? "secondary" :
-              "outline"
-            }
-            className={isMobile ? "whitespace-normal ml-2 text-center" : "whitespace-nowrap ml-2 min-w-[90px] text-center"}
-          >
-            {statusText[material.status as keyof typeof statusText]}
-          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant={
+                    material.status === "completed" ? "default" :
+                    material.status === "in-progress" ? "secondary" :
+                    "outline"
+                  }
+                  className="ml-2 whitespace-nowrap"
+                >
+                  {isMobile ? statusText[material.status as keyof typeof statusText] : 
+                             (material.status === "completed" ? "Изучено" : 
+                              material.status === "in-progress" ? "В процессе" : 
+                              "Не начато")}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{statusText[material.status as keyof typeof statusText]}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <CardDescription>{material.description}</CardDescription>
       </CardHeader>
@@ -240,7 +253,7 @@ const TrainingPage = () => {
                     <TooltipTrigger asChild>
                       <Button variant="ghost" className="justify-start">
                         <FileText className="mr-2 h-4 w-4" />
-                        <span className={isMobile ? "" : "truncate"}>Управление ресурсами экипажа</span>
+                        <span className="truncate">Управление ресурсами экипажа</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -254,7 +267,7 @@ const TrainingPage = () => {
                     <TooltipTrigger asChild>
                       <Button variant="ghost" className="justify-start">
                         <Video className="mr-2 h-4 w-4" />
-                        <span className={isMobile ? "" : "truncate"}>Новые процедуры безопасности</span>
+                        <span className="truncate">Новые процедуры безопасности</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -268,7 +281,7 @@ const TrainingPage = () => {
                     <TooltipTrigger asChild>
                       <Button variant="ghost" className="justify-start">
                         <FileText className="mr-2 h-4 w-4" />
-                        <span className={isMobile ? "" : "truncate"}>Техники управления стрессом</span>
+                        <span className="truncate">Техники управления стрессом</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
