@@ -1,4 +1,5 @@
 
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +8,33 @@ import {
   Clock, 
   MapPin, 
   PlaneTakeoff, 
-  PlaneLanding
+  PlaneLanding,
+  ChevronDown,
+  Filter
 } from "lucide-react";
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isSameDay } from "date-fns";
+import { ru } from "date-fns/locale";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Define proper TypeScript interfaces for our data
 interface Airport {
@@ -28,7 +54,7 @@ interface Flight {
 }
 
 // Sample data - would come from an API in a real app
-const upcomingFlights: Flight[] = [
+const allFlights: Flight[] = [
   {
     id: "1",
     flightNumber: "SU-1492",
@@ -79,10 +105,7 @@ const upcomingFlights: Flight[] = [
     duration: "1ч 45м",
     aircraft: "Airbus A320",
     status: "upcoming"
-  }
-];
-
-const pastFlights: Flight[] = [
+  },
   {
     id: "4",
     flightNumber: "SU-1703",
@@ -116,6 +139,40 @@ const pastFlights: Flight[] = [
     duration: "2ч 20м",
     aircraft: "Boeing 737-800",
     status: "completed"
+  },
+  {
+    id: "6",
+    flightNumber: "SU-1624",
+    departure: {
+      airport: "Москва (SVO)",
+      time: "2025-04-18T09:15:00",
+      terminal: "D"
+    },
+    arrival: {
+      airport: "Сочи (AER)",
+      time: "2025-04-18T11:45:00",
+      terminal: "B"
+    },
+    duration: "2ч 30м",
+    aircraft: "Boeing 737-800",
+    status: "upcoming"
+  },
+  {
+    id: "7",
+    flightNumber: "SU-1625",
+    departure: {
+      airport: "Сочи (AER)",
+      time: "2025-04-18T13:30:00",
+      terminal: "B"
+    },
+    arrival: {
+      airport: "Москва (SVO)",
+      time: "2025-04-18T16:00:00",
+      terminal: "D"
+    },
+    duration: "2ч 30м",
+    aircraft: "Boeing 737-800",
+    status: "upcoming"
   }
 ];
 
@@ -132,6 +189,17 @@ const formatDate = (dateString: string) => {
   } catch (error) {
     console.error("Error formatting date:", error);
     return dateString; // Return original string if formatting fails
+  }
+};
+
+// Helper to format just date (without time)
+const formatDateOnly = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    return format(date, "d MMMM, EEEE", { locale: ru });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString;
   }
 };
 
@@ -175,7 +243,16 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
             </div>
             <div className="flex items-center mt-1">
               <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.departure.airport}</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="truncate max-w-[150px] inline-block">{flight.departure.airport}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{flight.departure.airport}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Терминал {flight.departure.terminal}
@@ -198,7 +275,16 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
             </div>
             <div className="flex items-center justify-end mt-1">
               <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.arrival.airport}</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="truncate max-w-[150px] inline-block">{flight.arrival.airport}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{flight.arrival.airport}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Терминал {flight.arrival.terminal}
@@ -210,33 +296,156 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
   );
 };
 
+// Component to display flights grouped by day
+const FlightsByDay = ({ flights }: { flights: Flight[] }) => {
+  // Group flights by day
+  const flightsByDay: Record<string, Flight[]> = {};
+  
+  flights.forEach(flight => {
+    const departureDate = new Date(flight.departure.time);
+    const dateKey = format(departureDate, 'yyyy-MM-dd');
+    
+    if (!flightsByDay[dateKey]) {
+      flightsByDay[dateKey] = [];
+    }
+    
+    flightsByDay[dateKey].push(flight);
+  });
+  
+  // Sort dates
+  const sortedDates = Object.keys(flightsByDay).sort();
+  
+  return (
+    <div className="space-y-8">
+      {sortedDates.map(dateKey => {
+        const dayFlights = flightsByDay[dateKey];
+        const formattedDate = formatDateOnly(dayFlights[0].departure.time);
+        
+        return (
+          <div key={dateKey}>
+            <div className="sticky top-0 bg-background py-2 mb-4 border-b">
+              <h3 className="text-lg font-semibold text-primary">{formattedDate}</h3>
+            </div>
+            <div className="space-y-4">
+              {dayFlights.map(flight => (
+                <FlightCard key={flight.id} flight={flight} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      
+      {sortedDates.length === 0 && (
+        <div className="text-center py-8">
+          <p>Нет рейсов для отображения</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SchedulePage = () => {
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [view, setView] = useState<"day" | "week" | "month">("week");
+  const [tabValue, setTabValue] = useState("upcoming");
+  
+  // Filter flights based on status and date
+  const getFilteredFlights = () => {
+    let statusFilter: string[];
+    
+    if (tabValue === "upcoming") {
+      statusFilter = ["active", "upcoming"];
+    } else {
+      statusFilter = ["completed"];
+    }
+    
+    let dateFilteredFlights = allFlights.filter(flight => {
+      const departureDate = new Date(flight.departure.time);
+      
+      if (!date) return true;
+      
+      if (view === "day") {
+        return isSameDay(departureDate, date);
+      } else if (view === "week") {
+        const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+        return isWithinInterval(departureDate, { start: weekStart, end: weekEnd });
+      } else if (view === "month") {
+        return departureDate.getMonth() === date.getMonth() && 
+               departureDate.getFullYear() === date.getFullYear();
+      }
+      
+      return true;
+    });
+    
+    return dateFilteredFlights.filter(flight => statusFilter.includes(flight.status));
+  };
+  
+  const filteredFlights = getFilteredFlights();
+  
+  let dateDisplay = "";
+  if (date) {
+    if (view === "day") {
+      dateDisplay = format(date, "d MMMM yyyy", { locale: ru });
+    } else if (view === "week") {
+      const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+      dateDisplay = `${format(weekStart, "d MMMM", { locale: ru })} - ${format(weekEnd, "d MMMM yyyy", { locale: ru })}`;
+    } else if (view === "month") {
+      dateDisplay = format(date, "LLLL yyyy", { locale: ru });
+    }
+  }
+  
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Расписание полетов</h1>
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-          <span>Апрель 2025</span>
+        
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="font-normal justify-start">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                {dateDisplay || "Выберите дату"}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Select value={view} onValueChange={(v) => setView(v as "day" | "week" | "month")}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Выберите вид" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">День</SelectItem>
+              <SelectItem value="week">Неделя</SelectItem>
+              <SelectItem value="month">Месяц</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
-      <Tabs defaultValue="upcoming" className="w-full">
+      <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="upcoming">Предстоящие рейсы</TabsTrigger>
           <TabsTrigger value="past">Прошедшие рейсы</TabsTrigger>
         </TabsList>
         
         <TabsContent value="upcoming" className="space-y-4">
-          {upcomingFlights.map((flight) => (
-            <FlightCard key={flight.id} flight={flight} />
-          ))}
+          <FlightsByDay flights={filteredFlights} />
         </TabsContent>
         
         <TabsContent value="past" className="space-y-4">
-          {pastFlights.map((flight) => (
-            <FlightCard key={flight.id} flight={flight} />
-          ))}
+          <FlightsByDay flights={filteredFlights} />
         </TabsContent>
       </Tabs>
     </div>
