@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navItems = [
@@ -63,10 +65,26 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     }
   ];
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  // Close sidebar when route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    setSidebarOpen(false);
+  };
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 relative">
+      {/* Backdrop blur when sidebar is open */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside 
         className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
@@ -74,7 +92,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         } bg-sidebar`}
       >
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2 text-white">
+          <Link to="/" className="flex items-center gap-2 text-white" onClick={() => setSidebarOpen(false)}>
             <PlaneTakeoff className="h-6 w-6" />
             <span className="text-lg font-bold">FatigueGuard</span>
           </Link>
@@ -82,7 +100,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             variant="ghost" 
             size="icon" 
             className="text-white lg:hidden" 
-            onClick={toggleSidebar}
+            onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
           </Button>
@@ -90,10 +108,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
         <nav className="mt-6 px-4 space-y-1">
           {navItems.map((item) => (
-            <Link
+            <button
               key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 rounded-md py-2 px-3 transition-colors ${
+              onClick={() => handleNavigate(item.path)}
+              className={`flex w-full items-center gap-3 rounded-md py-2 px-3 transition-colors ${
                 location.pathname === item.path
                   ? "bg-sidebar-primary text-white"
                   : "text-sidebar-foreground hover:bg-sidebar-accent"
@@ -101,7 +119,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             >
               {item.icon}
               <span>{item.name}</span>
-            </Link>
+            </button>
           ))}
         </nav>
       </aside>
@@ -114,7 +132,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               variant="ghost" 
               size="icon" 
               className="lg:hidden" 
-              onClick={toggleSidebar}
+              onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -130,3 +148,4 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 };
 
 export default DashboardLayout;
+
