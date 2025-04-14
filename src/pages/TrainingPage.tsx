@@ -15,14 +15,8 @@ import {
   AlertTriangle,
   ExternalLink
 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
+// Sample training materials
 const materials = [
   {
     id: "1",
@@ -77,62 +71,40 @@ const materials = [
 ];
 
 const MaterialCard = ({ material }: { material: any }) => {
-  const isMobile = useIsMobile();
-  
   const openMaterial = () => {
+    // In a real app, this would open the material
     console.log(`Opening material: ${material.title}`);
   };
   
   const statusText = {
     "completed": "Изучено",
-    "in-progress": "В процессе изучения",
-    "not-started": "Не начато обучение"
+    "in-progress": "В процессе",
+    "not-started": "Не начато"
   };
   
   return (
     <Card key={material.id} className="mb-4 hover-card">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  {material.type === "document" ? (
-                    <FileText className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Video className="h-5 w-5 text-primary" />
-                  )}
-                  <span className="truncate">{material.title}</span>
-                </CardTitle>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{material.title}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <CardTitle className="text-xl flex items-center gap-2">
+            {material.type === "document" ? (
+              <FileText className="h-5 w-5 text-primary" />
+            ) : (
+              <Video className="h-5 w-5 text-primary" />
+            )}
+            <span className="truncate">{material.title}</span>
+          </CardTitle>
           
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant={
-                    material.status === "completed" ? "default" :
-                    material.status === "in-progress" ? "secondary" :
-                    "outline"
-                  }
-                  className="ml-2 whitespace-nowrap"
-                >
-                  {isMobile ? statusText[material.status as keyof typeof statusText] : 
-                             (material.status === "completed" ? "Изучено" : 
-                              material.status === "in-progress" ? "В процессе" : 
-                              "Не начато")}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{statusText[material.status as keyof typeof statusText]}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Badge
+            variant={
+              material.status === "completed" ? "default" :
+              material.status === "in-progress" ? "secondary" :
+              "outline"
+            }
+            className="whitespace-nowrap ml-2 min-w-[90px] text-center"
+          >
+            {statusText[material.status as keyof typeof statusText]}
+          </Badge>
         </div>
         <CardDescription>{material.description}</CardDescription>
       </CardHeader>
@@ -197,7 +169,6 @@ const TrainingStatus = () => {
 
 const TrainingPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const isMobile = useIsMobile();
   
   const filteredMaterials = materials.filter(material =>
     material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -248,47 +219,18 @@ const TrainingPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col space-y-3">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" className="justify-start">
-                        <FileText className="mr-2 h-4 w-4" />
-                        <span className="truncate">Управление ресурсами экипажа</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Управление ресурсами экипажа</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" className="justify-start">
-                        <Video className="mr-2 h-4 w-4" />
-                        <span className="truncate">Новые процедуры безопасности</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Новые процедуры безопасности</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" className="justify-start">
-                        <FileText className="mr-2 h-4 w-4" />
-                        <span className="truncate">Техники управления стрессом</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Техники управления стрессом</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Button variant="ghost" className="justify-start">
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span className="truncate">Управление ресурсами экипажа</span>
+                </Button>
+                <Button variant="ghost" className="justify-start">
+                  <Video className="mr-2 h-4 w-4" />
+                  <span className="truncate">Новые процедуры безопасности</span>
+                </Button>
+                <Button variant="ghost" className="justify-start">
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span className="truncate">Техники управления стрессом</span>
+                </Button>
               </div>
             </CardContent>
           </Card>

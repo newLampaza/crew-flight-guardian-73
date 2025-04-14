@@ -1,247 +1,282 @@
 
-import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { 
-  Brain, 
+  Users, 
+  PlaneTakeoff, 
   Clock, 
-  ChevronsUpDown, 
-  AlertTriangle,
-  Calendar, 
-  ArrowRight
+  Brain, 
+  Stethoscope, 
+  Battery,
+  Activity,
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Link } from "react-router-dom";
 
-// Function to get the current date in a readable format
-const getCurrentDate = () => {
-  const today = new Date();
-  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-  return today.toLocaleDateString('ru-RU', options);
-};
-
-// Sample user data
-const currentUser = {
-  id: "user-1",
-  name: "Иван Петров",
-  position: "Второй пилот",
-  avatar: "/avatars/01.png",
-  cognitiveScore: 7.8,
-  alertness: 8.2,
-  attention: 7.5,
-  decisionMaking: 8.0,
-  status: "warning",
-  statusText: "Требуется повторный тест"
-};
-
-// Sample crew data
-const crew = [
-  {
-    id: "crew-1",
-    name: "Анна Смирнова",
-    position: "Командир экипажа",
-    avatar: "/avatars/02.png",
-    cognitiveScore: 8.5,
-    status: "good",
-    statusText: "В норме"
-  },
-  {
-    id: "crew-2",
-    name: "Дмитрий Иванов",
-    position: "Штурман",
-    avatar: "/avatars/03.png",
-    cognitiveScore: 6.2,
-    status: "danger",
-    statusText: "Критическое состояние"
-  },
-  {
-    id: "crew-3",
-    name: "Елена Кузнецова",
-    position: "Бортинженер",
-    avatar: "/avatars/04.png",
-    cognitiveScore: 7.9,
-    status: "warning",
-    statusText: "Повышенная усталость"
-  }
+// Sample data - in a real app this would come from an API
+const crewData = [
+  { id: 1, name: "Анна Смирнова", position: "Второй пилот" },
+  { id: 2, name: "Сергей Иванов", position: "Бортинженер" },
+  { id: 3, name: "Елена Козлова", position: "Старший бортпроводник" },
+  { id: 4, name: "Михаил Сидоров", position: "Бортпроводник" }
 ];
 
+const flightStats = {
+  weeklyFlights: 5,
+  weeklyHours: 24,
+  monthlyFlights: 18,
+  monthlyHours: 92
+};
+
 const Dashboard = () => {
-  const isMobile = useIsMobile();
-  
+  const { user } = useAuth();
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Добро пожаловать, Иван</h1>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-muted-foreground" />
-          <span>{getCurrentDate()}</span>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Состояние экипажа</CardTitle>
-            <CardDescription>Общая оценка когнитивных функций экипажа</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {crew.map((member) => (
-              <div key={member.id} className="flex items-center space-x-4">
-                <Avatar>
-                  <AvatarImage src={member.avatar} alt={member.name} />
-                  <AvatarFallback>{member.name.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1">
-                  <div className="flex justify-between">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className={isMobile ? "text-sm font-medium" : "crew-name"}>{member.name}</p>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{member.name}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className={isMobile ? "text-xs text-muted-foreground" : "crew-position"}>{member.position}</p>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{member.position}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+    <div className="space-y-6 animate-fade-in">
+      {/* Employee Profile Section */}
+      <div className="mb-8">
+        <Card className="hover-card bg-gradient-to-br from-sidebar-primary/10 to-sidebar/5">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2 text-center md:text-left">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Добро пожаловать, {user?.name}
+                </h1>
+                <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-muted-foreground">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <PlaneTakeoff className="h-4 w-4" />
+                    <span>{user?.position}</span>
                   </div>
-                  <div className="flex items-center">
-                    <div className="flex-1 mr-4">
-                      <Progress value={member.cognitiveScore * 10} className="h-2" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center">
-                              <span className={`status-indicator ${member.status === "good" ? "status-good" : member.status === "warning" ? "status-warning" : "status-danger"}`} />
-                              <span className={isMobile ? "text-xs" : "text-xs status-text"}>
-                                {member.statusText}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{member.statusText}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <Badge variant="outline">{member.cognitiveScore.toFixed(1)}</Badge>
-                    </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>{user?.role}</span>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Statistics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Flight Statistics */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <PlaneTakeoff className="h-5 w-5 text-primary" />
+              Статистика полетов
+            </CardTitle>
+            <CardDescription>Текущая неделя и месяц</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Количество полетов за неделю</span>
+                <span className="font-bold">{flightStats.weeklyFlights}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Налет часов за неделю</span>
+                <span className="font-bold">{flightStats.weeklyHours} ч</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Количество полетов за месяц</span>
+                <span className="font-bold">{flightStats.monthlyFlights}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Налет часов за месяц</span>
+                <span className="font-bold">{flightStats.monthlyHours} ч</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
         
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ваши показатели</CardTitle>
-              <CardDescription>Общая оценка: {currentUser.cognitiveScore.toFixed(1)}/10</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Бдительность</span>
-                  <span className="font-medium">{currentUser.alertness.toFixed(1)}</span>
+        {/* Current Crew */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Текущий экипаж
+            </CardTitle>
+            <CardDescription>Рейс SU-1492, Москва - Санкт-Петербург</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {crewData.map(member => (
+                <div key={member.id} className="flex justify-between items-center">
+                  <span className="crew-name">{member.name}</span>
+                  <span className="crew-position">{member.position}</span>
                 </div>
-                <Progress value={currentUser.alertness * 10} className="h-2" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Flight Status */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Текущий полет
+            </CardTitle>
+            <CardDescription>Информация о рейсе</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-secondary rounded-lg">
+                <p className="font-bold text-lg">SU-1492</p>
+                <p>Москва (SVO) - Санкт-Петербург (LED)</p>
+                <p className="text-sm text-muted-foreground">2 часа 20 минут</p>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Внимание</span>
-                  <span className="font-medium">{currentUser.attention.toFixed(1)}</span>
-                </div>
-                <Progress value={currentUser.attention * 10} className="h-2" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Принятие решений</span>
-                  <span className="font-medium">{currentUser.decisionMaking.toFixed(1)}</span>
-                </div>
-                <Progress value={currentUser.decisionMaking * 10} className="h-2" />
-              </div>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center mt-4 text-status-warning">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      <span className="text-sm">
-                        {currentUser.statusText}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Требуется повторное тестирование</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <Button className="w-full mt-2">
-                <Brain className="mr-2 h-4 w-4" />
-                Пройти тест
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Анализ усталости</CardTitle>
-              <CardDescription>Последнее обновление: 2 часа назад</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Status Checks */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Cognitive Tests */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Когнитивные тесты
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Часы на дежурстве: 4ч 30м</span>
+                  <span className="status-indicator status-good"></span>
+                  <span>Тест внимания</span>
                 </div>
-                <ChevronsUpDown className="h-4 w-4 text-primary" />
+                <span className="font-bold text-status-good status-text">Пройден</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Тест реакции</span>
+                </div>
+                <span className="font-bold text-status-good status-text">Пройден</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-warning"></span>
+                  <span>Тест памяти</span>
+                </div>
+                <span className="font-bold text-status-warning status-text">Требуется повторный тест</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-danger"></span>
+                  <span>Тест когнитивной гибкости</span>
+                </div>
+                <span className="font-bold text-status-danger status-text">Не пройден</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Medical Check */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-primary" />
+              Медицинский контроль
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Допуск к полетам</span>
+                </div>
+                <span className="font-bold text-status-good status-text">Разрешен</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Дата медосмотра</span>
+                </div>
+                <span className="font-bold status-text">10.04.2025</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Следующий осмотр</span>
+                </div>
+                <span className="font-bold status-text">10.10.2025</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="status-indicator status-good"></span>
+                  <span>Врач</span>
+                </div>
+                <span className="font-bold status-text">Петров А.И.</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Fatigue Analysis - улучшенная версия */}
+        <Card className="hover-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Battery className="h-5 w-5 text-primary" />
+              Анализ усталости
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex flex-col items-center">
+                <div className="mb-2 text-5xl font-bold text-status-warning">65%</div>
+                <div className="text-sm text-muted-foreground">Средний уровень усталости</div>
               </div>
               
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Текущий уровень усталости</span>
-                  <span className="font-medium">3.2/10</span>
+              <div className="bg-amber-50 dark:bg-amber-500/10 p-3 rounded-lg mb-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Превышение нормы</p>
+                    <p className="text-xs text-muted-foreground">Рекомендуется дополнительный отдых перед следующим рейсом</p>
+                  </div>
                 </div>
-                <Progress value={32} className="h-2" />
               </div>
               
-              <div className="flex justify-between items-center">
-                <div className="text-sm">
-                  <p className="font-medium">Прогноз через 2 часа:</p>
-                  <p className="text-muted-foreground">Умеренная усталость (5.1/10)</p>
+              <div className="flex justify-between items-center pt-1">
+                <div className="flex items-center">
+                  <Activity className="h-4 w-4 text-primary mr-2" />
+                  <span className="text-sm">Динамика за неделю</span>
                 </div>
-                <Badge variant="outline" className="ml-2">+1.9</Badge>
+                <div className="flex items-center text-sm">
+                  <span className="text-rose-500 mr-1">+5%</span>
+                  <div className="w-16 h-2 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-rose-500 rounded-full" style={{width: "60%"}}></div>
+                  </div>
+                </div>
               </div>
               
-              <Button variant="outline" className="w-full mt-2">
-                Подробный анализ
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="flex justify-center pt-1">
+                <Link to="/fatigue-analysis">
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    Подробный анализ
+                    <ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
