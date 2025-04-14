@@ -1,6 +1,5 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Users, 
@@ -30,7 +29,7 @@ const Dashboard = () => {
   const { user } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <h1 className="text-3xl font-bold tracking-tight">
         Добро пожаловать, {user?.name}
       </h1>
@@ -95,7 +94,7 @@ const Dashboard = () => {
               <Clock className="h-5 w-5 text-primary" />
               Текущий полет
             </CardTitle>
-            <CardDescription>Статус и прогресс</CardDescription>
+            <CardDescription>Информация о рейсе</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -103,13 +102,6 @@ const Dashboard = () => {
                 <p className="font-bold text-lg">SU-1492</p>
                 <p>Москва (SVO) - Санкт-Петербург (LED)</p>
                 <p className="text-sm text-muted-foreground">2 часа 20 минут</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Прогресс полета</span>
-                  <span>45%</span>
-                </div>
-                <Progress value={45} className="h-2" />
               </div>
             </div>
           </CardContent>
@@ -164,23 +156,23 @@ const Dashboard = () => {
             <div className="space-y-3">
               <div className="flex items-center">
                 <span className="status-indicator status-good"></span>
-                <span>Предполетный осмотр</span>
-                <span className="ml-auto font-bold text-status-good">Пройден</span>
+                <span>Допуск к полетам</span>
+                <span className="ml-auto font-bold text-status-good">Разрешен</span>
               </div>
               <div className="flex items-center">
                 <span className="status-indicator status-good"></span>
-                <span>Артериальное давление</span>
-                <span className="ml-auto font-bold">120/80</span>
+                <span>Дата медосмотра</span>
+                <span className="ml-auto font-bold">10.04.2025</span>
               </div>
               <div className="flex items-center">
                 <span className="status-indicator status-good"></span>
-                <span>Пульс</span>
-                <span className="ml-auto font-bold">72 уд/мин</span>
+                <span>Следующий осмотр</span>
+                <span className="ml-auto font-bold">10.10.2025</span>
               </div>
               <div className="flex items-center">
                 <span className="status-indicator status-good"></span>
-                <span>Общее состояние</span>
-                <span className="ml-auto font-bold text-status-good">Норма</span>
+                <span>Врач</span>
+                <span className="ml-auto font-bold">Петров А.И.</span>
               </div>
             </div>
           </CardContent>
@@ -199,26 +191,6 @@ const Dashboard = () => {
               <div className="flex flex-col items-center">
                 <div className="mb-2 text-5xl font-bold text-status-warning">65%</div>
                 <div className="text-sm text-muted-foreground">Средний уровень усталости</div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Физическая усталость</span>
-                  <span>70%</span>
-                </div>
-                <Progress value={70} className="h-2" />
-                
-                <div className="flex justify-between text-sm">
-                  <span>Умственная усталость</span>
-                  <span>60%</span>
-                </div>
-                <Progress value={60} className="h-2" />
-                
-                <div className="flex justify-between text-sm">
-                  <span>Эмоциональная усталость</span>
-                  <span>65%</span>
-                </div>
-                <Progress value={65} className="h-2" />
               </div>
             </div>
           </CardContent>

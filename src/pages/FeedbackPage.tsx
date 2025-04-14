@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Star, Clock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Sample feedback data
 const feedbackHistory = [
@@ -43,6 +44,7 @@ const feedbackHistory = [
 const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [flightRating, setFlightRating] = useState(0);
+  const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,15 +74,15 @@ const FeedbackPage = () => {
       <h1 className="text-3xl font-bold tracking-tight">Отзывы о полетах</h1>
       
       <Tabs defaultValue="submit" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="submit">Отправить отзыв</TabsTrigger>
-          <TabsTrigger value="history">История отзывов</TabsTrigger>
+        <TabsList className="mb-4 w-full flex-wrap">
+          <TabsTrigger value="submit" className="flex-1">Отправить отзыв</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1">История отзывов</TabsTrigger>
         </TabsList>
         
         <TabsContent value="submit" className="space-y-4 animate-fade-in">
           <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 flex-wrap">
                 <MessageSquare className="h-5 w-5 text-primary" />
                 Отзыв о текущем полете
               </CardTitle>
@@ -113,7 +115,7 @@ const FeedbackPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
                     <Label htmlFor="comment">Комментарий к полету</Label>
                     <Badge className="bg-status-warning text-white">
                       Уровень усталости: Средний (63%)
@@ -145,7 +147,7 @@ const FeedbackPage = () => {
           {feedbackHistory.map((feedback) => (
             <Card key={feedback.id} className="hover-card transition-all duration-300">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start flex-wrap gap-2">
                   <CardTitle className="text-xl">
                     {feedback.flightNumber}
                   </CardTitle>

@@ -34,6 +34,7 @@ import {
   Bar
 } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Sample data for charts
 const monthlyFatigueData = [
@@ -66,6 +67,7 @@ const FatigueAnalysisPage = () => {
     accuracy: 92,
     rating: 0
   });
+  const isMobile = useIsMobile();
   
   const startRealTimeAnalysis = () => {
     setIsRealTimeAnalysisActive(true);
@@ -108,12 +110,12 @@ const FatigueAnalysisPage = () => {
   
   return (
     <div className="space-y-6 transition-all duration-300 animate-fade-in">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <h1 className="text-3xl font-bold tracking-tight">Анализ усталости</h1>
         
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="transition-all duration-300 hover:scale-105">
+            <Button className="transition-all duration-300 hover:scale-105 w-full sm:w-auto">
               Начать анализ
               <Activity className="ml-2 h-4 w-4" />
             </Button>
@@ -330,88 +332,105 @@ const FatigueAnalysisPage = () => {
         </div>
       </div>
       
-      {/* Модальное окно с результатами анализа */}
-      <AlertDialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+      {/* Модальное окно с результатами анализа и индикатором загрузки */}
+      <AlertDialog open={isRealTimeAnalysisActive || showResultDialog} onOpenChange={(open) => {
+        if (!open && !isRealTimeAnalysisActive) setShowResultDialog(false);
+      }}>
         <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-xl">Результаты анализа усталости</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              Анализ успешно завершен
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="py-6 space-y-6">
-            <div className="flex flex-col items-center justify-center space-y-1">
-              <div className="flex items-baseline space-x-1">
-                <span className="text-sm font-medium text-muted-foreground">ID:</span>
-                <span>{analysisResult.id}</span>
+          {isRealTimeAnalysisActive ? (
+            <div className="py-10 flex flex-col items-center justify-center space-y-4">
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-25"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
               </div>
+              <h2 className="text-xl font-semibold text-center">Анализ видео...</h2>
+              <p className="text-center text-muted-foreground">
+                Пожалуйста, подождите. Нейросеть анализирует признаки усталости
+              </p>
+            </div>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-center text-xl">Результаты анализа усталости</AlertDialogTitle>
+                <AlertDialogDescription className="text-center">
+                  Анализ успешно завершен
+                </AlertDialogDescription>
+              </AlertDialogHeader>
               
-              <div className="mt-4 flex items-center justify-center">
-                <div 
-                  className="h-32 w-32 rounded-full flex items-center justify-center relative transition-all duration-500"
-                  style={{
-                    background: `conic-gradient(hsl(var(--${analysisResult.level < 50 ? 'status-good' : analysisResult.level < 70 ? 'status-warning' : 'status-danger'})) ${analysisResult.level}%, #f3f4f6 0)`
-                  }}
-                >
-                  <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center flex-col">
-                    <span className={`text-2xl font-bold ${getFatigueStatusColor(analysisResult.level)}`}>
-                      {analysisResult.level}%
-                    </span>
-                    <span className="text-xs text-muted-foreground">Усталость</span>
+              <div className="py-6 space-y-6">
+                <div className="flex flex-col items-center justify-center space-y-1">
+                  <div className="flex items-baseline space-x-1">
+                    <span className="text-sm font-medium text-muted-foreground">ID:</span>
+                    <span>{analysisResult.id}</span>
+                  </div>
+                  
+                  <div className="mt-4 flex items-center justify-center">
+                    <div 
+                      className="h-32 w-32 rounded-full flex items-center justify-center relative transition-all duration-500"
+                      style={{
+                        background: `conic-gradient(hsl(var(--${analysisResult.level < 50 ? 'status-good' : analysisResult.level < 70 ? 'status-warning' : 'status-danger'})) ${analysisResult.level}%, #f3f4f6 0)`
+                      }}
+                    >
+                      <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center flex-col">
+                        <span className={`text-2xl font-bold ${getFatigueStatusColor(analysisResult.level)}`}>
+                          {analysisResult.level}%
+                        </span>
+                        <span className="text-xs text-muted-foreground">Усталость</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-2 flex items-baseline space-x-1">
+                    <span className="text-sm font-medium text-muted-foreground">Точность:</span>
+                    <span className="text-status-good">{analysisResult.accuracy}%</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-center text-sm font-medium">Пожалуйста, оцените точность анализа:</p>
+                  <div className="flex justify-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleStarRating(star)}
+                        className="focus:outline-none transition-colors duration-200"
+                      >
+                        <Star
+                          className={`h-6 w-6 sm:h-8 sm:w-8 ${
+                            analysisResult.rating >= star
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          } transition-colors duration-200 hover:fill-yellow-400 hover:text-yellow-400`}
+                        />
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
               
-              <div className="mt-2 flex items-baseline space-x-1">
-                <span className="text-sm font-medium text-muted-foreground">Точность:</span>
-                <span className="text-status-good">{analysisResult.accuracy}%</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <p className="text-center text-sm font-medium">Пожалуйста, оцените точность анализа:</p>
-              <div className="flex justify-center space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => handleStarRating(star)}
-                    className="focus:outline-none transition-colors duration-200"
-                  >
-                    <Star
-                      className={`h-8 w-8 ${
-                        analysisResult.rating >= star
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                      } transition-colors duration-200 hover:fill-yellow-400 hover:text-yellow-400`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
-            <div className="order-2 sm:order-1">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                    Отправить отзыв
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Отзыв отправлен</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Спасибо за ваш отзыв! Он поможет улучшить алгоритм анализа усталости.
-                    </p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <AlertDialogAction className="order-1 sm:order-2">OK</AlertDialogAction>
-          </AlertDialogFooter>
+              <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
+                <div className="order-2 sm:order-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        Отправить отзыв
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Отзыв отправлен</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Спасибо за ваш отзыв! Он поможет улучшить алгоритм анализа усталости.
+                        </p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <AlertDialogAction className="order-1 sm:order-2">OK</AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>
