@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   LineChart as LineChartIcon,
   Activity,
@@ -15,7 +16,9 @@ import {
   CheckCircle,
   Battery,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Star,
+  Loader
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -30,18 +33,9 @@ import {
   BarChart as RechartBarChart,
   Bar
 } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Sample data for charts
-const weeklyFatigueData = [
-  { day: "Пн", physical: 58, mental: 52, emotional: 45 },
-  { day: "Вт", physical: 62, mental: 58, emotional: 50 },
-  { day: "Ср", physical: 65, mental: 60, emotional: 55 },
-  { day: "Чт", physical: 70, mental: 65, emotional: 60 },
-  { day: "Пт", physical: 68, mental: 63, emotional: 58 },
-  { day: "Сб", physical: 65, mental: 60, emotional: 55 },
-  { day: "Вс", physical: 60, mental: 55, emotional: 50 }
-];
-
 const monthlyFatigueData = [
   { date: "1 апр", fatigue: 45 },
   { date: "4 апр", fatigue: 50 },
@@ -65,6 +59,13 @@ const flightTypeData = [
 const FatigueAnalysisPage = () => {
   const [isRealTimeAnalysisActive, setIsRealTimeAnalysisActive] = useState(false);
   const [aiRating, setAiRating] = useState<string | null>(null);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState({
+    id: "A-22042025-1492",
+    level: 65,
+    accuracy: 92,
+    rating: 0
+  });
   
   const startRealTimeAnalysis = () => {
     setIsRealTimeAnalysisActive(true);
@@ -77,6 +78,9 @@ const FatigueAnalysisPage = () => {
         title: "Анализ завершен",
         description: "Анализ усталости в реальном времени завершен",
       });
+      
+      // Show results dialog
+      setShowResultDialog(true);
     }, 3000);
   };
   
@@ -89,19 +93,32 @@ const FatigueAnalysisPage = () => {
     });
   };
   
+  const handleStarRating = (rating: number) => {
+    setAnalysisResult(prev => ({
+      ...prev,
+      rating
+    }));
+  };
+  
+  const getFatigueStatusColor = (level: number) => {
+    if (level < 50) return "text-status-good";
+    if (level < 70) return "text-status-warning";
+    return "text-status-danger";
+  };
+  
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 transition-all duration-300 animate-fade-in">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Анализ усталости</h1>
         
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="transition-all duration-300 hover:scale-105">
               Начать анализ
               <Activity className="ml-2 h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Анализ усталости</DialogTitle>
               <DialogDescription>
@@ -111,7 +128,7 @@ const FatigueAnalysisPage = () => {
             <div className="flex flex-col space-y-4 py-4">
               <Button 
                 variant="outline" 
-                className="justify-start h-auto py-4"
+                className="justify-start h-auto py-4 transition-all duration-200 hover:bg-accent/20"
                 onClick={startRealTimeAnalysis}
                 disabled={isRealTimeAnalysisActive}
               >
@@ -128,7 +145,7 @@ const FatigueAnalysisPage = () => {
               
               <Button 
                 variant="outline" 
-                className="justify-start h-auto py-4"
+                className="justify-start h-auto py-4 transition-all duration-200 hover:bg-accent/20"
               >
                 <div className="flex items-start">
                   <BarChart className="h-10 w-10 mr-4 text-primary" />
@@ -144,7 +161,7 @@ const FatigueAnalysisPage = () => {
             <DialogFooter>
               {isRealTimeAnalysisActive ? (
                 <div className="flex items-center space-x-2 text-sm">
-                  <span className="h-4 w-4 animate-pulse-slow bg-primary rounded-full"></span>
+                  <Loader className="h-4 w-4 animate-spin text-primary" />
                   <span>Выполняется анализ...</span>
                 </div>
               ) : (
@@ -156,7 +173,7 @@ const FatigueAnalysisPage = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 transition-all duration-300 hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LineChartIcon className="h-5 w-5 text-primary" />
@@ -167,51 +184,12 @@ const FatigueAnalysisPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="weekly">
+            <Tabs defaultValue="monthly">
               <TabsList className="mb-4">
-                <TabsTrigger value="weekly">Неделя</TabsTrigger>
                 <TabsTrigger value="monthly">Месяц</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="weekly">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={weeklyFatigueData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="physical" 
-                        name="Физическая" 
-                        stroke="#0ea5e9" 
-                        strokeWidth={2} 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="mental" 
-                        name="Умственная" 
-                        stroke="#8b5cf6" 
-                        strokeWidth={2} 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="emotional" 
-                        name="Эмоциональная" 
-                        stroke="#f97316" 
-                        strokeWidth={2} 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="monthly">
+              <TabsContent value="monthly" className="animate-fade-in">
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
@@ -239,7 +217,7 @@ const FatigueAnalysisPage = () => {
         </Card>
         
         <div className="space-y-6">
-          <Card>
+          <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Battery className="h-5 w-5 text-primary" />
@@ -249,7 +227,7 @@ const FatigueAnalysisPage = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-center">
                 <div 
-                  className="h-36 w-36 rounded-full flex items-center justify-center relative"
+                  className="h-36 w-36 rounded-full flex items-center justify-center relative transition-all duration-500"
                   style={{
                     background: `conic-gradient(hsl(var(--status-warning)) 65%, #f3f4f6 0)`
                   }}
@@ -286,7 +264,7 @@ const FatigueAnalysisPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart className="h-5 w-5 text-primary" />
@@ -311,7 +289,7 @@ const FatigueAnalysisPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
               <CardTitle>Оценка алгоритма</CardTitle>
               <CardDescription>
@@ -351,6 +329,91 @@ const FatigueAnalysisPage = () => {
           </Card>
         </div>
       </div>
+      
+      {/* Модальное окно с результатами анализа */}
+      <AlertDialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">Результаты анализа усталости</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Анализ успешно завершен
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="py-6 space-y-6">
+            <div className="flex flex-col items-center justify-center space-y-1">
+              <div className="flex items-baseline space-x-1">
+                <span className="text-sm font-medium text-muted-foreground">ID:</span>
+                <span>{analysisResult.id}</span>
+              </div>
+              
+              <div className="mt-4 flex items-center justify-center">
+                <div 
+                  className="h-32 w-32 rounded-full flex items-center justify-center relative transition-all duration-500"
+                  style={{
+                    background: `conic-gradient(hsl(var(--${analysisResult.level < 50 ? 'status-good' : analysisResult.level < 70 ? 'status-warning' : 'status-danger'})) ${analysisResult.level}%, #f3f4f6 0)`
+                  }}
+                >
+                  <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center flex-col">
+                    <span className={`text-2xl font-bold ${getFatigueStatusColor(analysisResult.level)}`}>
+                      {analysisResult.level}%
+                    </span>
+                    <span className="text-xs text-muted-foreground">Усталость</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-2 flex items-baseline space-x-1">
+                <span className="text-sm font-medium text-muted-foreground">Точность:</span>
+                <span className="text-status-good">{analysisResult.accuracy}%</span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-center text-sm font-medium">Пожалуйста, оцените точность анализа:</p>
+              <div className="flex justify-center space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => handleStarRating(star)}
+                    className="focus:outline-none transition-colors duration-200"
+                  >
+                    <Star
+                      className={`h-8 w-8 ${
+                        analysisResult.rating >= star
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      } transition-colors duration-200 hover:fill-yellow-400 hover:text-yellow-400`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
+            <div className="order-2 sm:order-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                    Отправить отзыв
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Отзыв отправлен</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Спасибо за ваш отзыв! Он поможет улучшить алгоритм анализа усталости.
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <AlertDialogAction className="order-1 sm:order-2">OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

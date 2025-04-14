@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, ThumbsUp, ThumbsDown, Star, Clock } from "lucide-react";
+import { MessageSquare, Star, Clock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 // Sample feedback data
@@ -43,13 +42,12 @@ const feedbackHistory = [
 
 const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
-  const [satisfaction, setSatisfaction] = useState<"satisfied" | "neutral" | "dissatisfied" | null>(null);
-  const [fatigueRating, setFatigueRating] = useState<string>("");
+  const [flightRating, setFlightRating] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!feedbackText || !satisfaction || !fatigueRating) {
+    if (!feedbackText || flightRating === 0) {
       toast({
         title: "Ошибка отправки",
         description: "Пожалуйста, заполните все поля формы",
@@ -66,12 +64,11 @@ const FeedbackPage = () => {
     
     // Reset form
     setFeedbackText("");
-    setSatisfaction(null);
-    setFatigueRating("");
+    setFlightRating(0);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <h1 className="text-3xl font-bold tracking-tight">Отзывы о полетах</h1>
       
       <Tabs defaultValue="submit" className="w-full">
@@ -80,8 +77,8 @@ const FeedbackPage = () => {
           <TabsTrigger value="history">История отзывов</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="submit" className="space-y-4">
-          <Card>
+        <TabsContent value="submit" className="space-y-4 animate-fade-in">
+          <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-primary" />
@@ -95,80 +92,58 @@ const FeedbackPage = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>Общая оценка полета</Label>
-                  <div className="flex items-center gap-4">
-                    <Button
-                      type="button"
-                      variant={satisfaction === "satisfied" ? "default" : "outline"}
-                      className="flex-1"
-                      onClick={() => setSatisfaction("satisfied")}
-                    >
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      Хорошо
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={satisfaction === "neutral" ? "default" : "outline"}
-                      className="flex-1"
-                      onClick={() => setSatisfaction("neutral")}
-                    >
-                      <Star className="mr-2 h-4 w-4" />
-                      Нормально
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={satisfaction === "dissatisfied" ? "default" : "outline"}
-                      className="flex-1"
-                      onClick={() => setSatisfaction("dissatisfied")}
-                    >
-                      <ThumbsDown className="mr-2 h-4 w-4" />
-                      Сложно
-                    </Button>
+                  <div className="flex justify-center space-x-1 sm:space-x-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setFlightRating(star)}
+                        className="focus:outline-none transition-colors duration-200"
+                      >
+                        <Star
+                          className={`h-8 w-8 sm:h-10 sm:w-10 ${
+                            flightRating >= star
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          } transition-colors duration-200 hover:fill-yellow-400 hover:text-yellow-400`}
+                        />
+                      </button>
+                    ))}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Уровень усталости по окончании полета</Label>
-                  <RadioGroup value={fatigueRating} onValueChange={setFatigueRating}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="low" id="r1" />
-                      <Label htmlFor="r1">Низкий</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="r2" />
-                      <Label htmlFor="r2">Средний</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="high" id="r3" />
-                      <Label htmlFor="r3">Высокий</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="very-high" id="r4" />
-                      <Label htmlFor="r4">Очень высокий</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="comment">Комментарий к полету</Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="comment">Комментарий к полету</Label>
+                    <Badge className="bg-status-warning text-white">
+                      Уровень усталости: Средний (63%)
+                    </Badge>
+                  </div>
                   <Textarea
                     id="comment"
                     placeholder="Опишите особенности полета, любые нештатные ситуации или проблемы"
                     value={feedbackText}
                     onChange={(e) => setFeedbackText(e.target.value)}
                     rows={5}
+                    className="transition-all duration-200 focus:border-primary"
                   />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">Отправить отзыв</Button>
+                <Button 
+                  type="submit" 
+                  className="w-full transition-all duration-300 hover:scale-[1.02]"
+                >
+                  Отправить отзыв
+                </Button>
               </CardFooter>
             </form>
           </Card>
         </TabsContent>
         
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="history" className="space-y-4 animate-fade-in">
           {feedbackHistory.map((feedback) => (
-            <Card key={feedback.id} className="hover-card">
+            <Card key={feedback.id} className="hover-card transition-all duration-300">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-xl">
@@ -183,9 +158,9 @@ const FeedbackPage = () => {
                     ))}
                   </div>
                 </div>
-                <CardDescription className="flex items-center gap-2">
+                <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <span>{feedback.route}</span>
-                  <span className="text-xs">•</span>
+                  <span className="hidden sm:inline text-xs">•</span>
                   <span className="flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
                     {feedback.date}
@@ -193,7 +168,7 @@ const FeedbackPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm">{feedback.comment}</p>
+                <p className="text-sm text-left">{feedback.comment}</p>
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Уровень усталости:</span>
