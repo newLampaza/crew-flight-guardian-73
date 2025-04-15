@@ -2,38 +2,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { 
-  Users, 
-  PlaneTakeoff, 
-  Clock, 
-  Brain, 
-  Stethoscope, 
-  Battery,
-  Activity,
-  ChevronRight,
-  AlertTriangle
-} from "lucide-react";
+import { Users, PlaneTakeoff, Clock, Brain, Stethoscope, Battery, Activity, ChevronRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const crewData = [
-  { id: 1, name: "Анна Смирнова", position: "Второй пилот" },
-  { id: 2, name: "Сергей Иванов", position: "Бортинженер" },
-  { id: 3, name: "Елена Козлова", position: "Старший бортпроводник" },
-  { id: 4, name: "Михаил Сидоров", position: "Бортпроводник" }
-];
-
+const crewData = [{
+  id: 1,
+  name: "Анна Смирнова",
+  position: "Второй пилот"
+}, {
+  id: 2,
+  name: "Сергей Иванов",
+  position: "Бортинженер"
+}, {
+  id: 3,
+  name: "Елена Козлова",
+  position: "Старший бортпроводник"
+}, {
+  id: 4,
+  name: "Михаил Сидоров",
+  position: "Бортпроводник"
+}];
 const flightStats = {
   weeklyFlights: 5,
   weeklyHours: 24,
   monthlyFlights: 18,
   monthlyHours: 92
 };
-
 const Dashboard = () => {
-  const { user } = useAuth();
-
-  return (
-    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
+  const {
+    user
+  } = useAuth();
+  return <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
       {/* Employee Profile Section */}
       <div className="mb-8">
         <Card className="hover-card bg-gradient-to-br from-sidebar-primary/10 to-sidebar/5">
@@ -109,8 +107,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {crewData.map(member => (
-                <div key={member.id} className="flex justify-between items-center">
+              {crewData.map(member => <div key={member.id} className="flex justify-between items-center">
                   <div className="tooltip-wrapper">
                     <span className="crew-name text-base">{member.name}</span>
                     <span className="tooltip-text">{member.name}</span>
@@ -119,8 +116,7 @@ const Dashboard = () => {
                     <span className="crew-position text-base">{member.position}</span>
                     <span className="tooltip-text">{member.position}</span>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
@@ -177,14 +173,14 @@ const Dashboard = () => {
                   <span className="status-indicator status-warning"></span>
                   <span className="text-base">Тест памяти</span>
                 </div>
-                <span className="font-bold text-status-warning text-base">Требуется повторный тест</span>
+                <span className="text-status-warning text-base font-bold text-right">Требуется повторный тест</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-danger"></span>
                   <span className="text-base">Тест когнитивной гибкости</span>
                 </div>
-                <span className="font-bold text-status-danger text-base">Не пройден</span>
+                <span className="font-bold text-status-danger text-base text-right">Не пройден</span>
               </div>
             </div>
           </CardContent>
@@ -265,7 +261,9 @@ const Dashboard = () => {
                 <div className="flex items-center">
                   <span className="text-rose-500 mr-2 text-base">+5%</span>
                   <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-rose-500 rounded-full" style={{width: "60%"}}></div>
+                    <div className="h-full bg-rose-500 rounded-full" style={{
+                    width: "60%"
+                  }}></div>
                   </div>
                 </div>
               </div>
@@ -282,8 +280,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
