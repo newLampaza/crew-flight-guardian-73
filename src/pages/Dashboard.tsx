@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { Users, PlaneTakeoff, Clock, Brain, Stethoscope, Battery, Activity, ChevronRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
+
 const crewData = [{
   id: 1,
   name: "Анна Смирнова",
@@ -21,18 +22,25 @@ const crewData = [{
   name: "Михаил Сидоров",
   position: "Бортпроводник"
 }];
+
 const flightStats = {
   weeklyFlights: 5,
   weeklyHours: 24,
   monthlyFlights: 18,
   monthlyHours: 92
 };
+
 const Dashboard = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+
+  const admissionStatus = {
+    isAllowed: true,
+    nextFlight: "SU-1492",
+    nextFlightTime: "15:30",
+    reasonIfNotAllowed: null
+  };
+
   return <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
-      {/* Employee Profile Section */}
       <div className="mb-8">
         <Card className="hover-card bg-gradient-to-br from-sidebar-primary/10 to-sidebar/5">
           <CardContent className="p-8">
@@ -63,9 +71,45 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Flight Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <Card className="hover-card col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl flex items-center gap-3">
+              <PlaneTakeoff className="h-6 w-6 text-primary" />
+              Допуск к полету
+            </CardTitle>
+            <CardDescription className="text-base">Статус следующего рейса</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-secondary rounded-lg">
+                <div className="flex items-center justify-center mb-3">
+                  {admissionStatus.isAllowed ? (
+                    <div className="flex items-center text-status-good">
+                      <span className="status-indicator status-good" />
+                      <span className="text-lg font-semibold">Допущен</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-status-danger">
+                      <span className="status-indicator status-danger" />
+                      <span className="text-lg font-semibold">Не допущен</span>
+                    </div>
+                  )}
+                </div>
+                <p className="font-bold text-xl mb-2">Рейс {admissionStatus.nextFlight}</p>
+                <p className="text-base text-muted-foreground">
+                  Вылет в {admissionStatus.nextFlightTime}
+                </p>
+                {!admissionStatus.isAllowed && admissionStatus.reasonIfNotAllowed && (
+                  <div className="mt-3 p-2 bg-destructive/10 rounded text-destructive text-sm">
+                    {admissionStatus.reasonIfNotAllowed}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -96,7 +140,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
-        {/* Current Crew */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -121,7 +164,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
-        {/* Flight Status */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -142,9 +184,7 @@ const Dashboard = () => {
         </Card>
       </div>
       
-      {/* Status Checks */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Cognitive Tests */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -186,7 +226,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
-        {/* Medical Check */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -228,7 +267,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
-        {/* Fatigue Analysis */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -282,4 +320,5 @@ const Dashboard = () => {
       </div>
     </div>;
 };
+
 export default Dashboard;
