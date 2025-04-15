@@ -404,10 +404,8 @@ const FatigueAnalysisPage = () => {
         <Button 
           onClick={startAnalysis} 
           disabled={isAnalyzing}
-          variant="gradient"
-          className="relative overflow-hidden group"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
         >
-          <span className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform scale-0 rounded-full bg-white/10 group-hover:scale-100 group-hover:opacity-50"></span>
           {isAnalyzing ? (
             <>
               <Activity className="mr-2 h-4 w-4 animate-pulse" />
@@ -639,11 +637,16 @@ const FatigueAnalysisPage = () => {
           </DialogHeader>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            <div className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${analysisMode === 'realtime' ? 'ring-2 ring-primary' : ''} overflow-hidden`}>
+            <div 
+              className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${
+                analysisMode === 'realtime' ? 'ring-2 ring-primary' : ''
+              } overflow-hidden cursor-pointer`}
+              onClick={() => setAnalysisMode('realtime')}
+            >
               <div className="p-4 border-b">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 rounded-full bg-blue-100 dark:bg-blue-500/10">
-                    <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2.5 rounded-full bg-primary/10">
+                    <Video className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-medium text-lg">Реальный анализ</h3>
                 </div>
@@ -656,7 +659,10 @@ const FatigueAnalysisPage = () => {
                 {recording ? (
                   <Button 
                     variant="destructive" 
-                    onClick={stopRecording} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      stopRecording();
+                    }} 
                     className="w-full mb-3"
                   >
                     <X className="mr-2 h-4 w-4" />
@@ -664,8 +670,10 @@ const FatigueAnalysisPage = () => {
                   </Button>
                 ) : (
                   <Button 
-                    onClick={startRecording} 
-                    variant="gradient"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRecording();
+                    }}
                     className="w-full mb-3"
                   >
                     <Eye className="mr-2 h-4 w-4" />
@@ -674,7 +682,7 @@ const FatigueAnalysisPage = () => {
                 )}
                 
                 {analysisMode === 'realtime' && (
-                  <div className="relative h-48 bg-muted/20 dark:bg-muted/10 rounded-lg overflow-hidden">
+                  <div className="relative h-48 bg-muted rounded-lg overflow-hidden">
                     {recording ? (
                       <>
                         <video 
@@ -707,11 +715,16 @@ const FatigueAnalysisPage = () => {
               </div>
             </div>
             
-            <div className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${analysisMode === 'flight' ? 'ring-2 ring-primary' : ''} overflow-hidden`}>
+            <div 
+              className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${
+                analysisMode === 'flight' ? 'ring-2 ring-primary' : ''
+              } overflow-hidden cursor-pointer`}
+              onClick={() => setAnalysisMode('flight')}
+            >
               <div className="p-4 border-b">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 rounded-full bg-purple-100 dark:bg-purple-500/10">
-                    <HistoryIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2.5 rounded-full bg-primary/10">
+                    <HistoryIcon className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-medium text-lg">Анализ последнего рейса</h3>
                 </div>
@@ -735,9 +748,11 @@ const FatigueAnalysisPage = () => {
                 )}
                 
                 <Button 
-                  onClick={analyzeFlight}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    analyzeFlight();
+                  }}
                   disabled={!lastFlight?.flight_id}
-                  variant="gradient" 
                   className="w-full"
                 >
                   <Activity className="mr-2 h-4 w-4" />
@@ -860,7 +875,7 @@ const FatigueAnalysisPage = () => {
             
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
               <Button variant="outline" onClick={() => setAnalysisResult(null)}>Закрыть</Button>
-              <Button variant="gradient" onClick={submitFeedback}>Отправить оценку</Button>
+              <Button onClick={submitFeedback}>Отправить оценку</Button>
             </div>
           </div>
         </DialogContent>
