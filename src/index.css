@@ -208,7 +208,7 @@ body.dark-login {
   
   /* New tooltip utility */
   .tooltip-wrapper {
-    @apply relative group;
+    @apply relative;
   }
   
   .tooltip-text {
