@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,6 @@ import {
   PlaneLanding
 } from "lucide-react";
 
-// Define proper TypeScript interfaces for our data
 interface Airport {
   airport: string;
   time: string;
@@ -27,7 +25,6 @@ interface Flight {
   status: "active" | "upcoming" | "completed" | string;
 }
 
-// Sample data - would come from an API in a real app
 const upcomingFlights: Flight[] = [
   {
     id: "1",
@@ -119,7 +116,6 @@ const pastFlights: Flight[] = [
   }
 ];
 
-// Helper function to format date
 const formatDate = (dateString: string) => {
   try {
     const date = new Date(dateString);
@@ -135,7 +131,6 @@ const formatDate = (dateString: string) => {
   }
 };
 
-// Flight card component with proper typing
 const FlightCard = ({ flight }: { flight: Flight }) => {
   return (
     <Card className="mb-4 hover:shadow-md transition-all duration-200">
@@ -150,8 +145,14 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
               )}
             </div>
             <div>
-              <h3 className="font-bold text-lg">{flight.flightNumber}</h3>
-              <p className="text-sm text-muted-foreground">{flight.aircraft}</p>
+              <div className="tooltip-wrapper">
+                <h3 className="font-bold text-lg">{flight.flightNumber}</h3>
+                <span className="tooltip-text">{flight.flightNumber}</span>
+              </div>
+              <div className="tooltip-wrapper">
+                <p className="text-sm text-muted-foreground">{flight.aircraft}</p>
+                <span className="tooltip-text">{flight.aircraft}</span>
+              </div>
             </div>
           </div>
           <Badge
@@ -169,16 +170,25 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
         
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
           <div>
-            <div className="font-medium flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
-              {formatDate(flight.departure.time)}
+            <div className="tooltip-wrapper">
+              <div className="font-medium flex items-center">
+                <Clock className="h-4 w-4 mr-1" />
+                {formatDate(flight.departure.time)}
+              </div>
+              <span className="tooltip-text">{formatDate(flight.departure.time)}</span>
             </div>
-            <div className="flex items-center mt-1">
-              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.departure.airport}</span>
+            <div className="tooltip-wrapper">
+              <div className="flex items-center mt-1">
+                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                <span>{flight.departure.airport}</span>
+              </div>
+              <span className="tooltip-text">{flight.departure.airport}</span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Терминал {flight.departure.terminal}
+            <div className="tooltip-wrapper">
+              <div className="text-xs text-muted-foreground mt-1">
+                Терминал {flight.departure.terminal}
+              </div>
+              <span className="tooltip-text">Терминал {flight.departure.terminal}</span>
             </div>
           </div>
           
@@ -192,16 +202,25 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
           </div>
           
           <div className="text-right">
-            <div className="font-medium flex items-center justify-end">
-              <Clock className="h-4 w-4 mr-1" />
-              {formatDate(flight.arrival.time)}
+            <div className="tooltip-wrapper">
+              <div className="font-medium flex items-center justify-end">
+                <Clock className="h-4 w-4 mr-1" />
+                {formatDate(flight.arrival.time)}
+              </div>
+              <span className="tooltip-text">{formatDate(flight.arrival.time)}</span>
             </div>
-            <div className="flex items-center justify-end mt-1">
-              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{flight.arrival.airport}</span>
+            <div className="tooltip-wrapper">
+              <div className="flex items-center justify-end mt-1">
+                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                <span>{flight.arrival.airport}</span>
+              </div>
+              <span className="tooltip-text">{flight.arrival.airport}</span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Терминал {flight.arrival.terminal}
+            <div className="tooltip-wrapper">
+              <div className="text-xs text-muted-foreground mt-1">
+                Терминал {flight.arrival.terminal}
+              </div>
+              <span className="tooltip-text">Терминал {flight.arrival.terminal}</span>
             </div>
           </div>
         </div>

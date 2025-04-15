@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -113,8 +112,14 @@ const Dashboard = () => {
             <div className="space-y-3">
               {crewData.map(member => (
                 <div key={member.id} className="flex justify-between items-center">
-                  <span className="crew-name">{member.name}</span>
-                  <span className="crew-position">{member.position}</span>
+                  <div className="tooltip-wrapper">
+                    <span className="crew-name">{member.name}</span>
+                    <span className="tooltip-text">{member.name}</span>
+                  </div>
+                  <div className="tooltip-wrapper">
+                    <span className="crew-position">{member.position}</span>
+                    <span className="tooltip-text">{member.position}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -157,30 +162,54 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-good"></span>
-                  <span>Тест внимания</span>
+                  <div className="tooltip-wrapper">
+                    <span>Тест внимания</span>
+                    <span className="tooltip-text">Тест внимания</span>
+                  </div>
                 </div>
-                <span className="font-bold text-status-good status-text">Пройден</span>
+                <div className="tooltip-wrapper">
+                  <span className="font-bold text-status-good status-text">Пройден</span>
+                  <span className="tooltip-text">Пройден</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-good"></span>
-                  <span>Тест реакции</span>
+                  <div className="tooltip-wrapper">
+                    <span>Тест реакции</span>
+                    <span className="tooltip-text">Тест реакции</span>
+                  </div>
                 </div>
-                <span className="font-bold text-status-good status-text">Пройден</span>
+                <div className="tooltip-wrapper">
+                  <span className="font-bold text-status-good status-text">Пройден</span>
+                  <span className="tooltip-text">Пройден</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-warning"></span>
-                  <span>Тест памяти</span>
+                  <div className="tooltip-wrapper">
+                    <span>Тест памяти</span>
+                    <span className="tooltip-text">Тест памяти</span>
+                  </div>
                 </div>
-                <span className="font-bold text-status-warning status-text">Требуется повторный тест</span>
+                <div className="tooltip-wrapper">
+                  <span className="font-bold text-status-warning status-text">Требуется повторный тест</span>
+                  <span className="tooltip-text">Требуется повторный тест</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-danger"></span>
-                  <span>Тест когнитивной гибкости</span>
+                  <div className="tooltip-wrapper">
+                    <span>Тест когнитивной гибкости</span>
+                    <span className="tooltip-text">Тест когнитивной гибкости</span>
+                  </div>
                 </div>
-                <span className="font-bold text-status-danger status-text">Не пройден</span>
+                <div className="tooltip-wrapper">
+                  <span className="font-bold text-status-danger status-text">Не пройден</span>
+                  <span className="tooltip-text">Не пройден</span>
+                </div>
               </div>
             </div>
           </CardContent>

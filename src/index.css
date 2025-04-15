@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -187,21 +186,40 @@ body.dark-login {
     @apply flex items-center justify-between;
   }
   
-  /* Исправления для адаптивного отображения текста и статусов */
+  /* Updated text handling utilities */
   .crew-name {
-    @apply font-medium truncate max-w-[60%] sm:max-w-[65%];
+    @apply font-medium max-w-[60%] sm:max-w-[65%] sm:truncate;
+    @apply hover:whitespace-normal hover:overflow-visible sm:hover:whitespace-nowrap;
   }
   
   .crew-position {
-    @apply text-sm text-muted-foreground truncate max-w-[40%] sm:max-w-[35%];
+    @apply text-sm text-muted-foreground max-w-[40%] sm:max-w-[35%] sm:truncate;
+    @apply hover:whitespace-normal hover:overflow-visible sm:hover:whitespace-nowrap;
   }
   
   .status-text {
-    @apply whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px] sm:max-w-full;
+    @apply whitespace-normal sm:whitespace-nowrap sm:overflow-hidden sm:text-ellipsis sm:max-w-[100px] hover:whitespace-normal hover:overflow-visible;
   }
   
-  /* Более компактное отображение для мобильных устройств */
+  /* Исправления для адаптивного отображения текста и статусов */
   .compact-mobile {
     @apply flex-col sm:flex-row text-center sm:text-left;
+  }
+  
+  /* New tooltip utility */
+  .tooltip-wrapper {
+    @apply relative group;
+  }
+  
+  .tooltip-text {
+    @apply invisible group-hover:visible absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded-md 
+    whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200
+    bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1;
+  }
+  
+  @media (max-width: 640px) {
+    .tooltip-text {
+      @apply hidden;
+    }
   }
 }
