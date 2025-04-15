@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,6 @@ import {
   X
 } from "lucide-react";
 
-// Sample data
 const monthlyFatigueData = [
   { date: "1 апр", усталость: 45, внимательность: 85, сон: 75 },
   { date: "4 апр", усталость: 50, внимательность: 80, сон: 70 },
@@ -96,7 +94,6 @@ const indicators = [
   }
 ];
 
-// Sample analysis result data
 interface AnalysisResult {
   analysis_id?: number;
   fatigue_level?: string;
@@ -110,7 +107,6 @@ interface AnalysisResult {
   fps?: number;
 }
 
-// Sample flight data
 interface Flight {
   flight_id?: number;
   from_code?: string;
@@ -152,7 +148,6 @@ const FatigueAnalysisPage = () => {
     'Отлично'
   ];
 
-  // Format date helper
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -204,7 +199,6 @@ const FatigueAnalysisPage = () => {
       mediaRecorder.current.start(100);
       setRecording(true);
 
-      // Record for 30 seconds then stop
       setTimeout(() => {
         if (mediaRecorder.current?.state === 'recording') {
           stopRecording();
@@ -247,7 +241,6 @@ const FatigueAnalysisPage = () => {
         throw new Error('Записанное видео слишком короткое или повреждено');
       }
 
-      // Simulate file upload and processing
       setAnalysisProgress(p => ({...p, percent: 60}));
       await new Promise(resolve => setTimeout(resolve, 800));
       
@@ -257,7 +250,6 @@ const FatigueAnalysisPage = () => {
         percent: 80,
       });
   
-      // Simulate neural network analysis
       const interval = setInterval(() => {
         setAnalysisProgress(p => ({
           ...p,
@@ -265,14 +257,12 @@ const FatigueAnalysisPage = () => {
         }));
       }, 100);
   
-      // Complete analysis
       setTimeout(() => {
         clearInterval(interval);
         setAnalysisProgress(p => ({...p, percent: 100}));
         setTimeout(() => {
           setAnalysisProgress({loading: false, message: '', percent: 0});
           
-          // Mock analysis result
           setAnalysisResult({
             analysis_id: Math.floor(Math.random() * 1000),
             fatigue_level: Math.random() > 0.5 ? "Высокий" : "Средний",
@@ -326,7 +316,6 @@ const FatigueAnalysisPage = () => {
         setTimeout(() => {
           setAnalysisProgress({loading: false, message: '', percent: 0});
           
-          // Mock analysis result
           setAnalysisResult({
             analysis_id: Math.floor(Math.random() * 1000),
             fatigue_level: "Средний",
@@ -360,7 +349,6 @@ const FatigueAnalysisPage = () => {
     }
     
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 800));
       
       toast({
@@ -416,8 +404,10 @@ const FatigueAnalysisPage = () => {
         <Button 
           onClick={startAnalysis} 
           disabled={isAnalyzing}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          variant="gradient"
+          className="relative overflow-hidden group"
         >
+          <span className="absolute inset-0 w-full h-full transition-all duration-300 ease-out transform scale-0 rounded-full bg-white/10 group-hover:scale-100 group-hover:opacity-50"></span>
           {isAnalyzing ? (
             <>
               <Activity className="mr-2 h-4 w-4 animate-pulse" />
@@ -425,7 +415,7 @@ const FatigueAnalysisPage = () => {
             </>
           ) : (
             <>
-              <Brain className="mr-2 h-4 w-4" />
+              <Brain className="mr-2 h-5 w-5" />
               Начать анализ
             </>
           )}
@@ -639,114 +629,129 @@ const FatigueAnalysisPage = () => {
         </div>
       </div>
 
-      {/* Модальное окно выбора типа анализа */}
       <Dialog open={analysisMode !== null} onOpenChange={(open) => !open && setAnalysisMode(null)}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl">Выберите тип анализа</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Выберите тип анализа</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Выберите метод для оценки вашего текущего состояния
+            </DialogDescription>
           </DialogHeader>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            {/* Режим реального анализа */}
-            <div className={`border p-4 rounded-lg ${analysisMode === 'realtime' ? 'ring-2 ring-primary' : ''} hover:bg-accent/10 transition-colors`}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                  <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${analysisMode === 'realtime' ? 'ring-2 ring-primary' : ''} overflow-hidden`}>
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2.5 rounded-full bg-blue-100 dark:bg-blue-500/10">
+                    <Video className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="font-medium text-lg">Реальный анализ</h3>
                 </div>
-                <h3 className="font-medium">Реальный анализ</h3>
+                <p className="text-sm text-muted-foreground pb-3">
+                  Анализ в режиме реального времени с использованием камеры
+                </p>
               </div>
               
-              {recording ? (
-                <Button 
-                  variant="destructive" 
-                  onClick={stopRecording} 
-                  className="w-full mb-3"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Остановить запись
-                </Button>
-              ) : (
-                <Button 
-                  onClick={startRecording} 
-                  className="w-full mb-3"
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  {analysisResult ? 'Повторить запись' : 'Начать запись (30 сек)'}
-                </Button>
-              )}
-              
-              {analysisMode === 'realtime' && (
-                <div className="relative h-48 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
-                  {recording ? (
-                    <>
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        muted 
-                        playsInline 
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
-                          <span className="w-2 h-2 mr-1 rounded-full bg-rose-500 animate-pulse"></span>
-                          REC
-                        </span>
+              <div className="p-4">
+                {recording ? (
+                  <Button 
+                    variant="destructive" 
+                    onClick={stopRecording} 
+                    className="w-full mb-3"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Остановить запись
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={startRecording} 
+                    variant="gradient"
+                    className="w-full mb-3"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    {analysisResult ? 'Повторить запись' : 'Начать запись (30 сек)'}
+                  </Button>
+                )}
+                
+                {analysisMode === 'realtime' && (
+                  <div className="relative h-48 bg-muted/20 dark:bg-muted/10 rounded-lg overflow-hidden">
+                    {recording ? (
+                      <>
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          muted 
+                          playsInline 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
+                            <span className="w-2 h-2 mr-1 rounded-full bg-rose-500 animate-pulse"></span>
+                            REC
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <p>Нажмите "Начать запись"</p>
                       </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <p>Нажмите "Начать запись"</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {cameraError && (
-                <div className="p-3 mt-3 text-sm bg-destructive/10 text-destructive rounded-md">
-                  {cameraError}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+                
+                {cameraError && (
+                  <div className="p-3 mt-3 text-sm bg-destructive/10 text-destructive rounded-md">
+                    {cameraError}
+                  </div>
+                )}
+              </div>
             </div>
             
-            {/* Режим анализа последнего полета */}
-            <div className={`border p-4 rounded-lg ${analysisMode === 'flight' ? 'ring-2 ring-primary' : ''} hover:bg-accent/10 transition-colors`}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/20">
-                  <HistoryIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <div className={`border rounded-xl bg-card hover:bg-accent/5 transition-colors ${analysisMode === 'flight' ? 'ring-2 ring-primary' : ''} overflow-hidden`}>
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2.5 rounded-full bg-purple-100 dark:bg-purple-500/10">
+                    <HistoryIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h3 className="font-medium text-lg">Анализ последнего рейса</h3>
                 </div>
-                <h3 className="font-medium">Анализ последнего рейса</h3>
+                <p className="text-sm text-muted-foreground pb-3">
+                  Анализ на основе данных вашего последнего полета
+                </p>
               </div>
               
-              {lastFlight && (
-                <div className="p-3 mb-3 bg-muted rounded-md">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Маршрут:</span>
-                    <span className="text-sm">{lastFlight.from_code} → {lastFlight.to_code}</span>
+              <div className="p-4">
+                {lastFlight && (
+                  <div className="p-3 mb-3 bg-muted/20 rounded-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Маршрут:</span>
+                      <span className="text-sm font-semibold">{lastFlight.from_code} → {lastFlight.to_code}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Время вылета:</span>
+                      <span className="text-sm">{formatDate(lastFlight.departure_time)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Время вылета:</span>
-                    <span className="text-sm">{formatDate(lastFlight.departure_time)}</span>
-                  </div>
-                </div>
-              )}
-              
-              <Button 
-                onClick={analyzeFlight}
-                disabled={!lastFlight?.flight_id}
-                className="w-full"
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                Проанализировать
-              </Button>
+                )}
+                
+                <Button 
+                  onClick={analyzeFlight}
+                  disabled={!lastFlight?.flight_id}
+                  variant="gradient" 
+                  className="w-full"
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  Проанализировать
+                </Button>
+              </div>
             </div>
           </div>
           
-          {/* Прогресс анализа */}
           {analysisProgress.loading && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{analysisProgress.message}</span>
-                <span className="text-sm">{analysisProgress.percent}%</span>
+                <span className="text-sm font-mono">{analysisProgress.percent}%</span>
               </div>
               <Progress 
                 value={analysisProgress.percent} 
@@ -757,20 +762,18 @@ const FatigueAnalysisPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Диалог с результатами анализа */}
       <Dialog open={!!analysisResult} onOpenChange={(open) => !open && setAnalysisResult(null)}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Результаты анализа</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Результаты анализа</DialogTitle>
             <DialogDescription>
               Анализ #{analysisResult?.analysis_id || 'неизвестно'} от {formatDate(analysisResult?.analysis_date)}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4 space-y-6">
-            {/* Результаты анализа */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
+              <div className="flex flex-col items-center justify-center p-4 border rounded-lg bg-card/50">
                 <span className="text-sm text-muted-foreground mb-1">Уровень усталости</span>
                 <span className={`text-2xl font-bold ${
                   analysisResult?.fatigue_level === 'Высокий' ? 'text-rose-500' : 
@@ -780,7 +783,7 @@ const FatigueAnalysisPage = () => {
                 </span>
               </div>
               
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
+              <div className="flex flex-col items-center justify-center p-4 border rounded-lg bg-card/50">
                 <span className="text-sm text-muted-foreground mb-1">Точность модели</span>
                 <div className="relative w-20 h-20">
                   <svg className="w-full h-full transform -rotate-90">
@@ -814,10 +817,9 @@ const FatigueAnalysisPage = () => {
               </div>
             </div>
             
-            {/* Звездный рейтинг */}
-            <div className="border rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-center">Оценка анализа</h4>
-              <div className="flex justify-center gap-2">
+            <div className="border rounded-lg p-5 bg-card/50">
+              <h4 className="font-medium mb-4 text-center">Оценка анализа</h4>
+              <div className="flex justify-center gap-3">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <div 
                     key={star}
@@ -827,13 +829,13 @@ const FatigueAnalysisPage = () => {
                     onClick={() => setFeedbackScore(star)}
                   >
                     <Star
-                      className={`h-8 w-8 ${
+                      className={`h-8 w-8 transition-all duration-300 ${
                         star <= (hoveredStar || feedbackScore) 
-                          ? 'fill-yellow-400 text-yellow-400' 
+                          ? 'fill-yellow-400 text-yellow-400 scale-110' 
                           : 'text-gray-300'
-                      } transition-colors`}
+                      }`}
                     />
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium bg-background border px-2 py-1 rounded">
+                    <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium bg-background border shadow-md px-3 py-1.5 rounded">
                       {starLabels[star - 1]}
                     </div>
                   </div>
@@ -841,12 +843,10 @@ const FatigueAnalysisPage = () => {
               </div>
             </div>
             
-            {/* Видео (если есть) */}
             {analysisResult?.video_path && (
-              <div className="border rounded-lg p-4">
+              <div className="border rounded-lg p-5 bg-card/50">
                 <h4 className="font-medium mb-3">Видеозапись</h4>
-                <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-md">
-                  {/* Здесь будет видео, но для примера просто заглушка */}
+                <div className="aspect-video bg-muted rounded-md">
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     <p>Видео недоступно в демо-режиме</p>
                   </div>
@@ -858,20 +858,18 @@ const FatigueAnalysisPage = () => {
               </div>
             )}
             
-            {/* Кнопки действий */}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
               <Button variant="outline" onClick={() => setAnalysisResult(null)}>Закрыть</Button>
-              <Button onClick={submitFeedback}>Отправить оценку</Button>
+              <Button variant="gradient" onClick={submitFeedback}>Отправить оценку</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
       
-      {/* Диалог анализа (процесс) */}
       <Dialog open={isAnalyzing}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Выполняется анализ</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Выполняется анализ</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
             <div className="relative w-24 h-24">
