@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -116,37 +115,6 @@ def analyze_source(source, is_video_file=False, output_file=None):
     
     result = analyzer.get_final_score()
     return result['level'], result['percent']
-
-# New function for web API
-def analyze_video_file(video_file_path):
-    """Analyze a video file and return fatigue analysis results"""
-    analyzer = FatigueAnalyzer('neural_network/data/models/fatigue_model.keras')
-    
-    cap = cv2.VideoCapture(video_file_path)
-    if not cap.isOpened():
-        raise ValueError("Failed to open video file")
-    
-    frame_count = 0
-    max_frames = 300  # Limit analysis to 300 frames
-    
-    while cap.isOpened() and frame_count < max_frames:
-        ret, frame = cap.read()
-        if not ret:
-            break
-            
-        processed = analyzer.process_frame(frame)
-        frame_count += 1
-        
-        # Process every 5th frame to speed up analysis
-        for _ in range(4):
-            if cap.isOpened():
-                cap.read()
-                frame_count += 1
-    
-    cap.release()
-    
-    result = analyzer.get_final_score()
-    return result
 
 if __name__ == '__main__':
     import argparse
