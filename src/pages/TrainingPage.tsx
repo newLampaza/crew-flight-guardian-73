@@ -4,6 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   BookOpen, 
   FileText, 
@@ -72,7 +78,6 @@ const materials = [
 
 const MaterialCard = ({ material }: { material: any }) => {
   const openMaterial = () => {
-    // In a real app, this would open the material
     console.log(`Opening material: ${material.title}`);
   };
   
@@ -85,15 +90,24 @@ const MaterialCard = ({ material }: { material: any }) => {
   return (
     <Card key={material.id} className="mb-4 hover-card">
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-xl flex items-center gap-2">
-            {material.type === "document" ? (
-              <FileText className="h-5 w-5 text-primary" />
-            ) : (
-              <Video className="h-5 w-5 text-primary" />
-            )}
-            <span className="truncate">{material.title}</span>
-          </CardTitle>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  {material.type === "document" ? (
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
+                  ) : (
+                    <Video className="h-5 w-5 text-primary shrink-0" />
+                  )}
+                  <span className="truncate sm:max-w-[400px]">{material.title}</span>
+                </CardTitle>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{material.title}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Badge
             variant={
@@ -101,30 +115,40 @@ const MaterialCard = ({ material }: { material: any }) => {
               material.status === "in-progress" ? "secondary" :
               "outline"
             }
-            className="whitespace-nowrap ml-2 min-w-[90px] text-center"
+            className="self-start shrink-0"
           >
             {statusText[material.status as keyof typeof statusText]}
           </Badge>
         </div>
-        <CardDescription>{material.description}</CardDescription>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CardDescription className="line-clamp-2 sm:line-clamp-1 hover:line-clamp-none">
+                {material.description}
+              </CardDescription>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{material.description}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex justify-between items-center text-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div className="flex items-center">
-            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+            <Clock className="h-4 w-4 mr-1 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground">{material.duration}</span>
           </div>
-          
-          <Badge variant="outline">{material.category}</Badge>
+          <Badge variant="outline" className="shrink-0">{material.category}</Badge>
         </div>
         
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button onClick={openMaterial} className="flex-1">
             {material.type === "document" ? "Открыть документ" : "Смотреть видео"}
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
           
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="self-end">
             <Download className="h-4 w-4" />
           </Button>
         </div>
@@ -147,18 +171,18 @@ const TrainingStatus = () => {
       <CardContent className="space-y-4">
         <div className="w-full bg-secondary rounded-full h-2.5">
           <div 
-            className="bg-primary h-2.5 rounded-full" 
+            className="bg-primary h-2.5 rounded-full transition-all duration-300" 
             style={{ width: `${progress}%` }}
           ></div>
         </div>
         
         <div className="space-y-2">
           <div className="flex items-center">
-            <CheckCircle className="h-4 w-4 text-status-good mr-2" />
+            <CheckCircle className="h-4 w-4 text-status-good mr-2 shrink-0" />
             <span>Готовность к полетам: 100%</span>
           </div>
           <div className="flex items-center">
-            <AlertTriangle className="h-4 w-4 text-status-warning mr-2" />
+            <AlertTriangle className="h-4 w-4 text-status-warning mr-2 shrink-0" />
             <span>Скоро потребуется обновление сертификатов</span>
           </div>
         </div>
@@ -179,11 +203,11 @@ const TrainingPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Учебные материалы</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Учебные материалы</h1>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -219,18 +243,25 @@ const TrainingPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col space-y-3">
-                <Button variant="ghost" className="justify-start">
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span className="truncate">Управление ресурсами экипажа</span>
-                </Button>
-                <Button variant="ghost" className="justify-start">
-                  <Video className="mr-2 h-4 w-4" />
-                  <span className="truncate">Новые процедуры безопасности</span>
-                </Button>
-                <Button variant="ghost" className="justify-start">
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span className="truncate">Техники управления стрессом</span>
-                </Button>
+                <TooltipProvider>
+                  {[
+                    { icon: FileText, text: "Управление ресурсами экипажа" },
+                    { icon: Video, text: "Новые процедуры безопасности" },
+                    { icon: FileText, text: "Техники управления стрессом" }
+                  ].map((item, index) => (
+                    <Tooltip key={index}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" className="justify-start w-full">
+                          <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                          <span className="truncate">{item.text}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{item.text}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
