@@ -2,26 +2,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { Users, PlaneTakeoff, Clock, Brain, Stethoscope, Battery, Activity, ChevronRight, AlertTriangle } from "lucide-react";
+import { 
+  Users, 
+  PlaneTakeoff, 
+  Clock, 
+  Brain, 
+  Stethoscope, 
+  Battery,
+  Activity,
+  ChevronRight,
+  AlertTriangle
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
-const crewData = [{
-  id: 1,
-  name: "Анна Смирнова",
-  position: "Второй пилот"
-}, {
-  id: 2,
-  name: "Сергей Иванов",
-  position: "Бортинженер"
-}, {
-  id: 3,
-  name: "Елена Козлова",
-  position: "Старший бортпроводник"
-}, {
-  id: 4,
-  name: "Михаил Сидоров",
-  position: "Бортпроводник"
-}];
+const crewData = [
+  { id: 1, name: "Анна Смирнова", position: "Второй пилот" },
+  { id: 2, name: "Сергей Иванов", position: "Бортинженер" },
+  { id: 3, name: "Елена Козлова", position: "Старший бортпроводник" },
+  { id: 4, name: "Михаил Сидоров", position: "Бортпроводник" }
+];
 
 const flightStats = {
   weeklyFlights: 5,
@@ -33,14 +32,9 @@ const flightStats = {
 const Dashboard = () => {
   const { user } = useAuth();
 
-  const admissionStatus = {
-    isAllowed: true,
-    nextFlight: "SU-1492",
-    nextFlightTime: "15:30",
-    reasonIfNotAllowed: null
-  };
-
-  return <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
+  return (
+    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
+      {/* Employee Profile Section */}
       <div className="mb-8">
         <Card className="hover-card bg-gradient-to-br from-sidebar-primary/10 to-sidebar/5">
           <CardContent className="p-8">
@@ -71,45 +65,9 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <Card className="hover-card col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl flex items-center gap-3">
-              <PlaneTakeoff className="h-6 w-6 text-primary" />
-              Допуск к полету
-            </CardTitle>
-            <CardDescription className="text-base">Статус следующего рейса</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-center p-4 bg-secondary rounded-lg">
-                <div className="flex items-center justify-center mb-3">
-                  {admissionStatus.isAllowed ? (
-                    <div className="flex items-center text-status-good">
-                      <span className="status-indicator status-good" />
-                      <span className="text-lg font-semibold">Допущен</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-status-danger">
-                      <span className="status-indicator status-danger" />
-                      <span className="text-lg font-semibold">Не допущен</span>
-                    </div>
-                  )}
-                </div>
-                <p className="font-bold text-xl mb-2">Рейс {admissionStatus.nextFlight}</p>
-                <p className="text-base text-muted-foreground">
-                  Вылет в {admissionStatus.nextFlightTime}
-                </p>
-                {!admissionStatus.isAllowed && admissionStatus.reasonIfNotAllowed && (
-                  <div className="mt-3 p-2 bg-destructive/10 rounded text-destructive text-sm">
-                    {admissionStatus.reasonIfNotAllowed}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      {/* Statistics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Flight Statistics */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -140,6 +98,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
+        {/* Current Crew */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -150,7 +109,8 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {crewData.map(member => <div key={member.id} className="flex justify-between items-center">
+              {crewData.map(member => (
+                <div key={member.id} className="flex justify-between items-center">
                   <div className="tooltip-wrapper">
                     <span className="crew-name text-base">{member.name}</span>
                     <span className="tooltip-text">{member.name}</span>
@@ -159,11 +119,13 @@ const Dashboard = () => {
                     <span className="crew-position text-base">{member.position}</span>
                     <span className="tooltip-text">{member.position}</span>
                   </div>
-                </div>)}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
         
+        {/* Flight Status */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -184,7 +146,9 @@ const Dashboard = () => {
         </Card>
       </div>
       
+      {/* Status Checks */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Cognitive Tests */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -213,19 +177,20 @@ const Dashboard = () => {
                   <span className="status-indicator status-warning"></span>
                   <span className="text-base">Тест памяти</span>
                 </div>
-                <span className="text-status-warning text-base font-bold text-right">Требуется повторный тест</span>
+                <span className="font-bold text-status-warning text-base">Требуется повторный тест</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="status-indicator status-danger"></span>
                   <span className="text-base">Тест когнитивной гибкости</span>
                 </div>
-                <span className="font-bold text-status-danger text-base text-right">Не пройден</span>
+                <span className="font-bold text-status-danger text-base">Не пройден</span>
               </div>
             </div>
           </CardContent>
         </Card>
         
+        {/* Medical Check */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -267,6 +232,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
         
+        {/* Fatigue Analysis */}
         <Card className="hover-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl flex items-center gap-3">
@@ -299,9 +265,7 @@ const Dashboard = () => {
                 <div className="flex items-center">
                   <span className="text-rose-500 mr-2 text-base">+5%</span>
                   <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-rose-500 rounded-full" style={{
-                    width: "60%"
-                  }}></div>
+                    <div className="h-full bg-rose-500 rounded-full" style={{width: "60%"}}></div>
                   </div>
                 </div>
               </div>
@@ -318,7 +282,8 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Dashboard;
