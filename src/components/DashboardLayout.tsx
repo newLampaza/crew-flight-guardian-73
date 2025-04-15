@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -17,7 +16,10 @@ import {
   Menu,
   X,
   Moon,
-  Sun
+  Sun,
+  Shield,
+  ShieldCheck,
+  ShieldAlert
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -29,6 +31,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { theme, setTheme } = useTheme();
 
   const navItems = [
     { 
@@ -68,7 +71,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     }
   ];
 
-  // Close sidebar when route changes
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -78,17 +80,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     setSidebarOpen(false);
   };
 
-  const { theme, setTheme } = useTheme();
-
-  // Функция переключения темы с проверкой актуального состояния
-  const toggleTheme = () => {
-    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    setTheme(currentTheme === "dark" ? "light" : "dark");
+  const admissionStatus = {
+    isAllowed: true,
+    nextFlight: "SU-1492",
+    nextFlightTime: "15:30",
   };
 
   return (
     <div className="flex min-h-screen bg-background relative">
-      {/* Backdrop blur when sidebar is open */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
@@ -96,7 +95,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside 
         className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -135,26 +133,51 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </nav>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-card shadow-sm z-10">
           <div className="flex h-16 items-center justify-between px-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden" 
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden" 
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
+              <div className="hidden md:flex items-center gap-6 ml-4">
+                <div className="flex items-center gap-3">
+                  {admissionStatus.isAllowed ? (
+                    <>
+                      <ShieldCheck className="h-5 w-5 text-status-good" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-status-good">Допущен к полетам</span>
+                        <span className="text-xs text-muted-foreground">
+                          Рейс {admissionStatus.nextFlight} в {admissionStatus.nextFlightTime}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert className="h-5 w-5 text-status-danger" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-status-danger">Не допущен к полетам</span>
+                        <span className="text-xs text-muted-foreground">Требуется проверка</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleTheme}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               >
-                {document.documentElement.classList.contains('dark') ? (
+                {theme === "dark" ? (
                   <Sun className="h-5 w-5" />
                 ) : (
                   <Moon className="h-5 w-5" />
