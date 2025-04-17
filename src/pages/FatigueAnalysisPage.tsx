@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -750,21 +749,21 @@ const FatigueAnalysisPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Results dialog - updated to ensure background is not dark on mobile */}
+      {/* Results dialog - keep the existing design but adjust styling to better match example */}
       <Dialog open={analysisResult !== null} onOpenChange={(open) => !open && setAnalysisResult(null)}>
-        <DialogContent className="sm:max-w-[600px] bg-background">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">Результаты анализа</DialogTitle>
           </DialogHeader>
           
           {analysisResult && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
                 <span className="text-muted-foreground">ID анализа:</span>
                 <strong>#{analysisResult.analysis_id || 'неизвестно'}</strong>
               </div>
               
-              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
                 <span className="text-muted-foreground">Уровень усталости:</span>
                 <strong className={`
                   ${analysisResult.fatigue_level?.toLowerCase() === 'high' ? 'text-rose-500' : 
@@ -778,7 +777,7 @@ const FatigueAnalysisPage = () => {
                 </strong>
               </div>
 
-              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
                 <span className="text-muted-foreground">Точность модели:</span>
                 <div className="relative w-20 h-20">
                   <svg className="w-full h-full transform -rotate-90">
@@ -800,91 +799,62 @@ const FatigueAnalysisPage = () => {
                       fill="none"
                       strokeDasharray={226.1946}
                       strokeDashoffset={226.1946 - (226.1946 * (analysisResult.neural_network_score || 0))}
-                      className={`${
-                        (analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
-                        (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
-                        'text-emerald-500'
-                      } transition-all duration-1000`}
+                      className={`
+                        ${(analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
+                          (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
+                          'text-emerald-500'} 
+                        transition-all duration-1000
+                      `}
                     />
                   </svg>
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                    <span className="text-2xl font-bold">
+                    <span className="text-lg font-bold">
                       {Math.round((analysisResult.neural_network_score || 0) * 100)}%
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
-                <span className="text-muted-foreground">Статус:</span>
-                <div className="flex items-center gap-2">
-                  <div className={`
-                    w-3 h-3 rounded-full ${
-                      (analysisResult.neural_network_score || 0) > 0.7 ? 'bg-rose-500' : 
-                      (analysisResult.neural_network_score || 0) > 0.4 ? 'bg-amber-500' : 
-                      'bg-emerald-500'
-                    }
-                  `}></div>
-                  <span className={`
-                    font-medium ${
-                      (analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
-                      (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
-                      'text-emerald-500'
-                    }
-                  `}>
-                    {(analysisResult.neural_network_score || 0) > 0.7 ? 'Требуется отдых' : 
-                     (analysisResult.neural_network_score || 0) > 0.4 ? 'Повышенная усталость' : 
-                     'В норме'}
-                  </span>
-                </div>
-              </div>
-              
-              {analysisResult.from_code && analysisResult.to_code && (
-                <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
-                  <span className="text-muted-foreground">Маршрут:</span>
-                  <strong>{analysisResult.from_code} → {analysisResult.to_code}</strong>
-                </div>
-              )}
-              
-              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
-                <span className="text-muted-foreground">Дата анализа:</span>
-                <strong>{analysisResult.analysis_date || formatDate(new Date().toISOString())}</strong>
-              </div>
 
-              <div className="mt-6">
-                <p className="text-muted-foreground mb-2">Оцените точность анализа:</p>
-                <div className="flex justify-center gap-2">
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <span className="text-muted-foreground">Оценка системы:</span>
+                <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button
+                    <div 
                       key={star}
-                      type="button"
-                      onClick={() => setFeedbackScore(star)}
+                      className="relative cursor-pointer transition-transform hover:scale-110"
                       onMouseEnter={() => setHoveredStar(star)}
                       onMouseLeave={() => setHoveredStar(0)}
-                      className="p-1 transition-all duration-150"
-                      title={STAR_LABELS[star - 1]}
+                      onClick={() => setFeedbackScore(star)}
                     >
                       <Star
-                        className={`h-8 w-8 transition-all ${
-                          star <= (hoveredStar || feedbackScore)
-                            ? 'fill-amber-400 text-amber-400'
-                            : 'text-muted/40'
+                        className={`h-6 w-6 ${
+                          star <= (hoveredStar || feedbackScore) 
+                            ? 'text-amber-400 fill-amber-400' 
+                            : 'text-gray-300'
                         }`}
                       />
-                    </button>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap">
+                        {STAR_LABELS[star - 1]}
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <p className="text-center text-sm text-muted-foreground mt-1">
-                  {STAR_LABELS[feedbackScore - 1]}
-                </p>
               </div>
-              
-              <div className="flex justify-end gap-4 pt-4">
-                <Button onClick={() => setAnalysisResult(null)} variant="outline">
-                  Закрыть
-                </Button>
+
+              {analysisResult.video_path && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Запись:</h4>
+                  <video 
+                    controls 
+                    src={analysisResult.video_path}
+                    className="w-full rounded-md bg-black aspect-video"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
                 <Button onClick={submitFeedback}>
-                  Отправить отзыв
+                  Отправить оценку
                 </Button>
               </div>
             </div>
