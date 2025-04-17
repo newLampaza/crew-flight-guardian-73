@@ -1,13 +1,26 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   Calendar as CalendarIcon, 
   Clock, 
   MapPin, 
   PlaneTakeoff, 
-  PlaneLanding
+  PlaneLanding,
+  ArrowLeft,
+  ArrowRight,
+  List,
+  LayoutList,
 } from "lucide-react";
+import "../components/ui/schedule-view.css";
 
 interface Airport {
   airport: string;
@@ -76,6 +89,57 @@ const upcomingFlights: Flight[] = [
     duration: "1ч 45м",
     aircraft: "Airbus A320",
     status: "upcoming"
+  },
+  {
+    id: "6",
+    flightNumber: "SU-1533",
+    departure: {
+      airport: "Казань (KZN)",
+      time: "2025-04-17T10:45:00",
+      terminal: "1"
+    },
+    arrival: {
+      airport: "Москва (SVO)",
+      time: "2025-04-17T12:30:00",
+      terminal: "D"
+    },
+    duration: "1ч 45м",
+    aircraft: "Airbus A320",
+    status: "upcoming"
+  },
+  {
+    id: "7",
+    flightNumber: "SU-1590",
+    departure: {
+      airport: "Москва (SVO)",
+      time: "2025-04-18T13:00:00",
+      terminal: "D"
+    },
+    arrival: {
+      airport: "Сочи (AER)",
+      time: "2025-04-18T15:30:00",
+      terminal: "B"
+    },
+    duration: "2ч 30м",
+    aircraft: "Boeing 737-800",
+    status: "upcoming"
+  },
+  {
+    id: "8",
+    flightNumber: "SU-1591",
+    departure: {
+      airport: "Сочи (AER)",
+      time: "2025-04-19T16:45:00",
+      terminal: "B"
+    },
+    arrival: {
+      airport: "Москва (SVO)",
+      time: "2025-04-19T19:15:00",
+      terminal: "D"
+    },
+    duration: "2ч 30м",
+    aircraft: "Boeing 737-800",
+    status: "upcoming"
   }
 ];
 
@@ -131,10 +195,57 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const FlightCard = ({ flight }: { flight: Flight }) => {
+const formatDateShort = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString;
+  }
+};
+
+const formatWeekday = (date: Date) => {
+  return format(date, 'EEEE', { locale: ru });
+};
+
+const formatDayMonth = (date: Date) => {
+  return format(date, 'd MMMM', { locale: ru });
+};
+
+const FlightCard = ({ flight, viewMode = "full" }: { flight: Flight; viewMode?: "full" | "concise" }) => {
+  if (viewMode === "concise") {
+    return (
+      <div className={`flight-item concise`}>
+        <div className="flex justify-between items-center">
+          <div className="flight-number">{flight.flightNumber}</div>
+          <Badge
+            variant={
+              flight.status === "active" ? "default" :
+              flight.status === "upcoming" ? "secondary" :
+              "outline"
+            }
+            className="text-xs"
+          >
+            {flight.status === "active" ? "В полёте" :
+             flight.status === "upcoming" ? "Планируется" :
+             "Выполнен"}
+          </Badge>
+        </div>
+        <div className="flight-time mt-1">{formatDateShort(flight.departure.time)} → {formatDateShort(flight.arrival.time)}</div>
+        <div className="flight-route text-muted-foreground">
+          {flight.departure.airport} → {flight.arrival.airport}
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <Card className="mb-4 hover:shadow-md transition-all duration-200">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div className="mr-4 p-2 bg-primary/10 rounded-full">
@@ -171,16 +282,16 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
           <div>
             <div className="tooltip-wrapper">
-              <div className="font-medium flex items-center">
+              <div className="font-medium flex items-center text-sm sm:text-base">
                 <Clock className="h-4 w-4 mr-1" />
                 {formatDate(flight.departure.time)}
               </div>
               <span className="tooltip-text">{formatDate(flight.departure.time)}</span>
             </div>
             <div className="tooltip-wrapper">
-              <div className="flex items-center mt-1">
+              <div className="flex items-center mt-1 text-xs sm:text-sm">
                 <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span>{flight.departure.airport}</span>
+                <span className="truncate">{flight.departure.airport}</span>
               </div>
               <span className="tooltip-text">{flight.departure.airport}</span>
             </div>
@@ -192,9 +303,9 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
             </div>
           </div>
           
-          <div className="flex flex-col items-center px-4">
+          <div className="flex flex-col items-center px-2 sm:px-4">
             <div className="text-xs font-medium">{flight.duration}</div>
-            <div className="w-24 h-[1px] bg-border my-2 relative">
+            <div className="w-16 sm:w-24 h-[1px] bg-border my-2 relative">
               <div className="absolute top-1/2 left-0 w-2 h-2 -mt-1 rounded-full bg-primary"></div>
               <div className="absolute top-1/2 right-0 w-2 h-2 -mt-1 rounded-full bg-primary"></div>
             </div>
@@ -203,16 +314,16 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
           
           <div className="text-right">
             <div className="tooltip-wrapper">
-              <div className="font-medium flex items-center justify-end">
+              <div className="font-medium flex items-center justify-end text-sm sm:text-base">
                 <Clock className="h-4 w-4 mr-1" />
                 {formatDate(flight.arrival.time)}
               </div>
               <span className="tooltip-text">{formatDate(flight.arrival.time)}</span>
             </div>
             <div className="tooltip-wrapper">
-              <div className="flex items-center justify-end mt-1">
+              <div className="flex items-center justify-end mt-1 text-xs sm:text-sm">
                 <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span>{flight.arrival.airport}</span>
+                <span className="truncate">{flight.arrival.airport}</span>
               </div>
               <span className="tooltip-text">{flight.arrival.airport}</span>
             </div>
@@ -229,14 +340,115 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
   );
 };
 
+// Group flights by day of the week
+const groupFlightsByDay = (flights: Flight[], startDate: Date, endDate: Date) => {
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  
+  const flightsByDay = days.map(day => {
+    const dayFlights = flights.filter(flight => {
+      const departureDate = new Date(flight.departure.time);
+      return isSameDay(departureDate, day);
+    });
+    
+    return {
+      date: day,
+      flights: dayFlights
+    };
+  });
+  
+  return flightsByDay;
+};
+
 const SchedulePage = () => {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"full" | "concise">("full");
+  const [showCalendar, setShowCalendar] = useState(false);
+  
+  // Calculate week start and end dates
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday as first day
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  
+  // Group flights by day
+  const upcomingFlightsByDay = groupFlightsByDay(upcomingFlights, weekStart, weekEnd);
+  const pastFlightsByDay = groupFlightsByDay(pastFlights, weekStart, weekEnd);
+  
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setCurrentDate(date);
+      setShowCalendar(false);
+    }
+  };
+  
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Расписание полетов</h1>
+    <div className="space-y-6 schedule-container">
+      <div className="schedule-header">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Расписание полетов</h1>
+        
         <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-          <span>Апрель 2025</span>
+          <div className="view-toggle">
+            <Button 
+              variant={viewMode === "full" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setViewMode("full")}
+              className="hidden sm:flex"
+            >
+              <LayoutList className="h-4 w-4 mr-1" />
+              Полный
+            </Button>
+            <Button 
+              variant={viewMode === "concise" ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setViewMode("concise")}
+              className="hidden sm:flex"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Краткий
+            </Button>
+            
+            {/* Mobile toggle */}
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setViewMode(viewMode === "full" ? "concise" : "full")}
+              className="sm:hidden"
+            >
+              {viewMode === "full" ? 
+                <LayoutList className="h-4 w-4" /> : 
+                <List className="h-4 w-4" />
+              }
+            </Button>
+          </div>
+          
+          <div className="month-navigation">
+            <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            
+            <Popover open={showCalendar} onOpenChange={setShowCalendar}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="month-selector">
+                  <CalendarIcon className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">{format(currentDate, 'LLLL yyyy', { locale: ru })}</span>
+                  <span className="sm:hidden">{format(currentDate, 'LLL', { locale: ru })}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={handleDateSelect}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Button variant="outline" size="icon" onClick={nextMonth} className="h-8 w-8">
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -246,16 +458,62 @@ const SchedulePage = () => {
           <TabsTrigger value="past">Прошедшие рейсы</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="upcoming" className="space-y-4">
-          {upcomingFlights.map((flight) => (
-            <FlightCard key={flight.id} flight={flight} />
-          ))}
+        <TabsContent value="upcoming">
+          <div className="week-view">
+            {upcomingFlightsByDay.map((day, index) => (
+              <div key={index} className="day-column">
+                <div className="day-header">
+                  <div className="text-sm font-bold">{formatWeekday(day.date)}</div>
+                  <div className="text-xs text-muted-foreground">{formatDayMonth(day.date)}</div>
+                </div>
+                
+                {day.flights.length > 0 ? (
+                  <div className="space-y-2">
+                    {day.flights.map((flight) => (
+                      viewMode === "full" ? (
+                        <FlightCard key={flight.id} flight={flight} />
+                      ) : (
+                        <FlightCard key={flight.id} flight={flight} viewMode="concise" />
+                      )
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-4">
+                    Нет рейсов
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </TabsContent>
         
-        <TabsContent value="past" className="space-y-4">
-          {pastFlights.map((flight) => (
-            <FlightCard key={flight.id} flight={flight} />
-          ))}
+        <TabsContent value="past">
+          <div className="week-view">
+            {pastFlightsByDay.map((day, index) => (
+              <div key={index} className="day-column">
+                <div className="day-header">
+                  <div className="text-sm font-bold">{formatWeekday(day.date)}</div>
+                  <div className="text-xs text-muted-foreground">{formatDayMonth(day.date)}</div>
+                </div>
+                
+                {day.flights.length > 0 ? (
+                  <div className="space-y-2">
+                    {day.flights.map((flight) => (
+                      viewMode === "full" ? (
+                        <FlightCard key={flight.id} flight={flight} />
+                      ) : (
+                        <FlightCard key={flight.id} flight={flight} viewMode="concise" />
+                      )
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-4">
+                    Нет рейсов
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
