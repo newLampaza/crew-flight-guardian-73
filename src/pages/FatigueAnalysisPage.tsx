@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -798,3 +799,100 @@ const FatigueAnalysisPage = () => {
                       strokeWidth="8"
                       fill="none"
                       strokeDasharray={226.1946}
+                      strokeDashoffset={226.1946 - (226.1946 * (analysisResult.neural_network_score || 0))}
+                      className={`${
+                        (analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
+                        (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
+                        'text-emerald-500'
+                      } transition-all duration-1000`}
+                    />
+                  </svg>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                    <span className="text-2xl font-bold">
+                      {Math.round((analysisResult.neural_network_score || 0) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+                <span className="text-muted-foreground">Статус:</span>
+                <div className="flex items-center gap-2">
+                  <div className={`
+                    w-3 h-3 rounded-full ${
+                      (analysisResult.neural_network_score || 0) > 0.7 ? 'bg-rose-500' : 
+                      (analysisResult.neural_network_score || 0) > 0.4 ? 'bg-amber-500' : 
+                      'bg-emerald-500'
+                    }
+                  `}></div>
+                  <span className={`
+                    font-medium ${
+                      (analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
+                      (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
+                      'text-emerald-500'
+                    }
+                  `}>
+                    {(analysisResult.neural_network_score || 0) > 0.7 ? 'Требуется отдых' : 
+                     (analysisResult.neural_network_score || 0) > 0.4 ? 'Повышенная усталость' : 
+                     'В норме'}
+                  </span>
+                </div>
+              </div>
+              
+              {analysisResult.from_code && analysisResult.to_code && (
+                <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+                  <span className="text-muted-foreground">Маршрут:</span>
+                  <strong>{analysisResult.from_code} → {analysisResult.to_code}</strong>
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center p-4 bg-slate-50/80 dark:bg-slate-900/50 rounded-lg">
+                <span className="text-muted-foreground">Дата анализа:</span>
+                <strong>{analysisResult.analysis_date || formatDate(new Date().toISOString())}</strong>
+              </div>
+
+              <div className="mt-6">
+                <p className="text-muted-foreground mb-2">Оцените точность анализа:</p>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFeedbackScore(star)}
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      className="p-1 transition-all duration-150"
+                      title={STAR_LABELS[star - 1]}
+                    >
+                      <Star
+                        className={`h-8 w-8 transition-all ${
+                          star <= (hoveredStar || feedbackScore)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-muted/40'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center text-sm text-muted-foreground mt-1">
+                  {STAR_LABELS[feedbackScore - 1]}
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-4 pt-4">
+                <Button onClick={() => setAnalysisResult(null)} variant="outline">
+                  Закрыть
+                </Button>
+                <Button onClick={submitFeedback}>
+                  Отправить отзыв
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default FatigueAnalysisPage;
