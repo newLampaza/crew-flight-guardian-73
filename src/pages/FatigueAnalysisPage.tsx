@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { 
   LineChart, 
   Line, 
@@ -13,10 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
   Area,
-  AreaChart,
-  PieChart,
-  Pie,
-  Cell
+  AreaChart
 } from "recharts";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -31,8 +29,13 @@ import {
   Coffee,
   LineChart as LineChartIcon,
   FlaskConical,
-  Scale
+  Scale,
+  Video,
+  History,
+  Star
 } from "lucide-react";
+import axios from "axios";
+import "../FatigueAnalysis.css";
 
 // Sample data
 const monthlyFatigueData = [
@@ -88,19 +91,79 @@ const indicators = [
   }
 ];
 
-const FatigueAnalysisPage = () => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+// Sample history data
+const sampleHistoryData = [
+  { analysis_id: 1, neural_network_score: 0.65, analysis_date: "15 апр 2025, 14:30" },
+  { analysis_id: 2, neural_network_score: 0.48, analysis_date: "12 апр 2025, 09:15" },
+  { analysis_id: 3, neural_network_score: 0.72, analysis_date: "8 апр 2025, 18:22" },
+  { analysis_id: 4, neural_network_score: 0.35, analysis_date: "5 апр 2025, 11:45" },
+];
 
-  const startAnalysis = () => {
-    setIsAnalyzing(true);
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      toast({
-        title: "Анализ завершен",
-        description: "Обновлены показатели усталости",
-      });
-    }, 3000);
-  };
+// Type definitions
+interface AnalysisResult {
+  analysis_id?: number;
+  fatigue_level?: string;
+  neural_network_score?: number;
+  analysis_date?: string;
+  feedback_score?: number;
+  video_path?: string;
+  from_code?: string;
+  to_code?: string;
+  resolution?: string;
+  fps?: number;
+}
+
+interface Flight {
+  flight_id?: number;
+  from_code?: string;
+  to_code?: string;
+  departure_time?: string;
+  video_path?: string;
+}
+
+const STAR_LABELS = [
+  'Очень плохо',
+  'Плохо',
+  'Удовлетворительно',
+  'Хорошо',
+  'Отлично'
+];
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const FatigueAnalysisPage = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [analysisMode, setAnalysisMode] = useState<'realtime' | 'flight' | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [feedbackScore, setFeedbackScore] = useState(3);
+  const [historyData, setHistoryData] = useState<AnalysisResult[]>(sampleHistoryData);
+  const [lastFlight, setLastFlight] = useState<Flight | null>({
+    flight_id: 1,
+    from_code: "SVO",
+    to_code: "LED",
+    departure_time: "2025-04-15T14:30:00",
+    video_path: "/videos/test.mp4"
+  });
+  const [cameraError, setCameraError] = useState('');
+  const [recording, setRecording] = useState(false);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<Blob[]>([]);
+  const [hoveredStar, setHoveredStar] = useState(0);
+  
+  const [analysisProgress, setAnalysisProgress] = useState({
+    loading: false,
+    message: '',
+    percent: 0,
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -120,8 +183,251 @@ const FatigueAnalysisPage = () => {
     }
   };
 
+  const getProgressStatus = (score?: number) => {
+    const value = score || 0;
+    if (value > 0.7) return "error";
+    if (value > 0.4) return "warning";
+    return "success";
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          width: 640,
+          height: 480,
+          facingMode: 'user'
+        }
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      const options = { 
+        mimeType: 'video/webm; codecs=vp9',
+        videoBitsPerSecond: 2500000
+      };
+
+      mediaRecorder.current = new MediaRecorder(stream, options);
+      
+      mediaRecorder.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.current.onstop = () => {
+        const blob = new Blob(chunks.current, { type: 'video/webm' });
+        submitRecording(blob);
+        chunks.current = [];
+      };
+
+      mediaRecorder.current.start(100);
+      setRecording(true);
+
+      // Автоматически прекращаем запись через 30 секунд
+      setTimeout(() => {
+        if (mediaRecorder.current?.state === 'recording') {
+          mediaRecorder.current.stop();
+        }
+      }, 30000);
+
+    } catch (error) {
+      setCameraError('Для анализа требуется доступ к камере');
+      toast({
+        title: "Ошибка доступа к камере",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder.current?.state === 'recording') {
+      mediaRecorder.current.stop();
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+      setRecording(false);
+    }
+  };
+
+  const submitRecording = async (blob: Blob) => {
+    try {
+      setAnalysisProgress({
+        loading: true,
+        message: 'Обработка видео...',
+        percent: 20,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (!blob || blob.size === 0) {
+        throw new Error('Записанное видео слишком короткое или повреждено');
+      }
+
+      const formData = new FormData();
+      formData.append('video', blob, `recording_${Date.now()}.webm`);
+
+      // Имитация запроса к API
+      // В реальной ситуации это был бы настоящий запрос
+      // const response = await axios.post('/api/fatigue/analyze', formData);
+      
+      setAnalysisProgress({
+        loading: true,
+        message: 'Анализ нейросетью...',
+        percent: 80,
+      });
+  
+      // Имитация прогресса анализа
+      const interval = setInterval(() => {
+        setAnalysisProgress(p => ({
+          ...p,
+          percent: Math.min(p.percent + 1, 95),
+        }));
+      }, 100);
+  
+      // Окончание анализа (имитация)
+      setTimeout(() => {
+        clearInterval(interval);
+        setAnalysisProgress(p => ({...p, percent: 100}));
+        setTimeout(() => {
+          setAnalysisProgress({loading: false, message: '', percent: 0});
+          
+          // Мок-данные результата анализа
+          setAnalysisResult({
+            analysis_id: Math.floor(Math.random() * 1000) + 1,
+            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
+            neural_network_score: Math.random(),
+            analysis_date: formatDate(new Date().toISOString()),
+            video_path: '/videos/test.mp4'
+          });
+          
+          // Добавляем анализ в историю
+          setHistoryData(prev => [{
+            analysis_id: Math.floor(Math.random() * 1000) + 1,
+            neural_network_score: Math.random(),
+            analysis_date: formatDate(new Date().toISOString())
+          }, ...prev]);
+          
+        }, 500);
+      }, 2000);
+      
+    } catch (error) {
+      setAnalysisProgress({loading: false, message: '', percent: 0});
+      toast({
+        title: "Ошибка анализа",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const analyzeFlight = async () => {
+    try {
+      setAnalysisProgress({
+        loading: true,
+        message: 'Обработка видео...',
+        percent: 20,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Имитация запроса к API
+      // В реальной ситуации это был бы настоящий запрос
+      // const response = await axios.post('/api/fatigue/analyze-flight', { flight_id: lastFlight?.flight_id });
+
+      setAnalysisProgress({
+        loading: true,
+        message: 'Анализ нейросетью...',
+        percent: 80,
+      });
+
+      const interval = setInterval(() => {
+        setAnalysisProgress(p => ({
+          ...p,
+          percent: Math.min(p.percent + 1, 95),
+        }));
+      }, 100);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        setAnalysisProgress(p => ({...p, percent: 100}));
+        setTimeout(() => {
+          setAnalysisProgress({loading: false, message: '', percent: 0});
+          
+          // Мок-данные результата анализа
+          setAnalysisResult({
+            analysis_id: Math.floor(Math.random() * 1000) + 1,
+            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
+            neural_network_score: Math.random(),
+            analysis_date: formatDate(new Date().toISOString()),
+            from_code: lastFlight?.from_code,
+            to_code: lastFlight?.to_code,
+            video_path: lastFlight?.video_path
+          });
+          
+          // Добавляем анализ в историю
+          setHistoryData(prev => [{
+            analysis_id: Math.floor(Math.random() * 1000) + 1,
+            neural_network_score: Math.random(),
+            analysis_date: formatDate(new Date().toISOString())
+          }, ...prev]);
+          
+        }, 500);
+      }, 2000);
+
+    } catch (error) {
+      setAnalysisProgress({loading: false, message: '', percent: 0});
+      toast({
+        title: "Ошибка анализа рейса",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!analysisResult?.analysis_id) {
+      toast({
+        title: "Ошибка",
+        description: "Не выбран анализ для оценки",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Имитация отправки отзыва
+      // await axios.post('/api/fatigue/feedback', {
+      //   analysis_id: analysisResult.analysis_id,
+      //   score: feedbackScore
+      // });
+      
+      toast({
+        title: "Отзыв сохранен",
+        description: `Спасибо за вашу оценку: ${feedbackScore} из 5`
+      });
+      setAnalysisResult(null);
+      
+    } catch (error) {
+      toast({
+        title: "Ошибка отправки отзыва",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in p-6">
+    <div className="space-y-8 animate-fade-in p-6 fatigue-container">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Анализ усталости</h1>
@@ -131,21 +437,12 @@ const FatigueAnalysisPage = () => {
         </div>
 
         <Button 
-          onClick={startAnalysis} 
-          disabled={isAnalyzing}
+          onClick={() => setAnalysisMode('realtime')}
           className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
         >
-          {isAnalyzing ? (
-            <>
-              <Activity className="mr-2 h-4 w-4 animate-pulse" />
-              Анализ...
-            </>
-          ) : (
-            <>
-              <Brain className="mr-2 h-4 w-4" />
-              Начать анализ
-            </>
-          )}
+          <Brain className="mr-2 h-4 w-4" />
+          Начать анализ
+          {recording && <span className="recording-indicator">● Запись</span>}
         </Button>
       </div>
 
@@ -327,51 +624,222 @@ const FatigueAnalysisPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                Рекомендации
+                История анализов
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium mb-1">Повышенная усталость</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Рекомендуется сделать перерыв 15-20 минут перед следующим полетом
-                    </p>
+              <div className="space-y-3">
+                {historyData.slice(0, 3).map((item) => (
+                  <div key={item.analysis_id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        (item.neural_network_score || 0) > 0.7 ? 'bg-rose-500' : 
+                        (item.neural_network_score || 0) > 0.4 ? 'bg-amber-500' : 
+                        'bg-emerald-500'
+                      }`} />
+                      <span className="text-sm">{item.analysis_date}</span>
+                    </div>
+                    <span className="font-medium">
+                      {Math.round((item.neural_network_score || 0) * 100)}%
+                    </span>
                   </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
-                  <Coffee className="h-5 w-5 text-blue-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium mb-1">Режим отдыха</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Запланируйте полноценный 8-часовой сон в ближайшие сутки
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Диалог анализа */}
-      <Dialog open={isAnalyzing}>
-        <DialogContent className="sm:max-w-md">
+      {/* Модальное окно выбора типа анализа */}
+      <Dialog open={analysisMode !== null} onOpenChange={() => setAnalysisMode(null)}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Выполняется анализ</DialogTitle>
+            <DialogTitle>Выберите тип анализа</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="relative w-24 h-24">
-              <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-20"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-              <Brain className="absolute inset-0 m-auto h-12 w-12 text-primary animate-pulse" />
+          <div className="mode-selector">
+            <div className={`mode-option ${analysisMode === 'realtime' ? 'active' : ''}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <Video className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-medium">Реальный анализ</h3>
+              </div>
+              
+              {recording ? (
+                <Button variant="destructive" onClick={stopRecording} className="w-full">
+                  Остановить запись
+                </Button>
+              ) : (
+                <Button onClick={startRecording} className="w-full">
+                  {analysisResult ? 'Повторить запись' : 'Начать запись (30 сек)'}
+                </Button>
+              )}
+              
+              {analysisMode === 'realtime' && (
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  muted 
+                  playsInline 
+                  className="video-preview mt-3"
+                  style={{ display: recording ? 'block' : 'none' }}
+                />
+              )}
+              
+              {cameraError && (
+                <div className="mt-3 p-3 bg-rose-50 text-rose-600 rounded-md">
+                  {cameraError}
+                </div>
+              )}
             </div>
-            <p className="mt-4 text-sm text-center text-muted-foreground">
-              Анализ биометрических показателей<br />и уровня усталости
-            </p>
+
+            <div className={`mode-option ${analysisMode === 'flight' ? 'active' : ''}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <History className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-medium">Анализ последнего рейса</h3>
+              </div>
+              
+              {lastFlight && (
+                <p className="mb-4 text-muted-foreground">
+                  {lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'} (
+                  {formatDate(lastFlight.departure_time)})
+                </p>
+              )}
+              
+              <Button 
+                onClick={analyzeFlight}
+                disabled={!lastFlight?.video_path}
+                className="w-full"
+              >
+                Проанализировать
+              </Button>
+            </div>
           </div>
+          
+          {/* Оверлей загрузки */}
+          {analysisProgress.loading && (
+            <div className="analysis-overlay">
+              <div className="analysis-progress">
+                <div className="relative w-16 h-16 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-20"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                  <Brain className="absolute inset-0 m-auto h-8 w-8 text-primary animate-pulse" />
+                </div>
+                <div className="progress-text">
+                  <h3 className="font-medium">{analysisProgress.message}</h3>
+                  <Progress value={analysisProgress.percent} className="h-2 mt-3" />
+                  <p>{analysisProgress.percent}% завершено</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Модальное окно результатов анализа */}
+      <Dialog open={analysisResult !== null} onOpenChange={(open) => !open && setAnalysisResult(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Результаты анализа</DialogTitle>
+          </DialogHeader>
+          
+          {analysisResult && (
+            <div className="results">
+              <div className="result-item">
+                <span>ID анализа:</span>
+                <strong>#{analysisResult.analysis_id || 'неизвестно'}</strong>
+              </div>
+              
+              <div className="result-item">
+                <span>Уровень усталости:</span>
+                <strong className={`status-${analysisResult.fatigue_level?.toLowerCase() || 'unknown'}`}>
+                  {analysisResult.fatigue_level || 'Нет данных'}
+                </strong>
+              </div>
+
+              <div className="result-item">
+                <span>Точность модели:</span>
+                <div className="relative w-20 h-20">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-muted/20"
+                    />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={226.1946}
+                      strokeDashoffset={226.1946 - (226.1946 * (analysisResult.neural_network_score || 0))}
+                      className={`
+                        ${(analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
+                          (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
+                          'text-emerald-500'} 
+                        transition-all duration-1000
+                      `}
+                    />
+                  </svg>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                    <span className="text-xl font-bold">
+                      {Math.round((analysisResult.neural_network_score || 0) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="result-item">
+                <span>Оценка системы:</span>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <div 
+                      key={star}
+                      className="star-wrapper"
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      onClick={() => setFeedbackScore(star)}
+                    >
+                      <Star
+                        fill={star <= (hoveredStar || feedbackScore) ? "#facc15" : "none"}
+                        className={`
+                          h-6 w-6
+                          ${star <= (hoveredStar || feedbackScore) ? 'text-yellow-400' : 'text-gray-300'}
+                          transition-colors
+                        `}
+                      />
+                      <div className="star-tooltip">
+                        {STAR_LABELS[star - 1]}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {analysisResult.video_path && (
+                <div className="video-review">
+                  <video 
+                    controls 
+                    src={analysisResult.video_path}
+                    className="video-preview"
+                  />
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-3 mt-4">
+                <Button variant="outline" onClick={() => setAnalysisResult(null)}>
+                  Закрыть
+                </Button>
+                <Button onClick={submitFeedback}>
+                  Отправить оценку
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
