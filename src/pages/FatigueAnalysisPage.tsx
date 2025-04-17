@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -651,41 +650,48 @@ const FatigueAnalysisPage = () => {
 
       {/* Модальное окно выбора типа анализа */}
       <Dialog open={analysisMode !== null} onOpenChange={() => setAnalysisMode(null)}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="text-xl font-semibold">Выберите тип анализа</DialogTitle>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 pt-2">
-            <div className={`p-6 border rounded-lg transition-all duration-200 ${analysisMode === 'realtime' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+          <div className="flex flex-col gap-6 p-6 pt-2">
+            {/* Realtime analysis block - moved to the top and expanded */}
+            <div 
+              className={`p-6 border rounded-lg transition-all duration-200 ${
+                analysisMode === 'realtime' ? 'border-primary bg-primary/5' : 'border-border'
+              }`}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <Video className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-medium">Реальный анализ</h3>
               </div>
               
               {recording ? (
-                <Button variant="destructive" onClick={stopRecording} className="w-full">
+                <Button variant="destructive" onClick={stopRecording} className="w-full mb-4">
                   Остановить запись
                   {recording && <span className="ml-2 inline-block animate-pulse text-white">●</span>}
                 </Button>
               ) : (
-                <Button onClick={startRecording} className="w-full">
+                <Button onClick={startRecording} className="w-full mb-4">
                   {analysisResult ? 'Повторить запись' : 'Начать запись (30 сек)'}
                 </Button>
               )}
               
-              {analysisMode === 'realtime' && (
-                <div className="mt-4">
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    muted 
-                    playsInline 
-                    className="w-full rounded-md bg-black aspect-video"
-                    style={{ display: recording ? 'block' : 'none' }}
-                  />
-                </div>
-              )}
+              {/* Larger camera display with smooth transition */}
+              <div 
+                className={`mt-4 transition-all duration-500 ease-in-out transform ${
+                  recording ? 'opacity-100 scale-100 max-h-[50vh]' : 'opacity-0 scale-95 max-h-0 overflow-hidden'
+                }`}
+              >
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  muted 
+                  playsInline 
+                  className="w-full rounded-md bg-black aspect-video shadow-lg"
+                />
+              </div>
               
               {cameraError && (
                 <div className="mt-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
@@ -694,7 +700,12 @@ const FatigueAnalysisPage = () => {
               )}
             </div>
 
-            <div className={`p-6 border rounded-lg transition-all duration-200 ${analysisMode === 'flight' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+            {/* Flight analysis block - moved below */}
+            <div 
+              className={`p-6 border rounded-lg transition-all duration-200 ${
+                analysisMode === 'flight' ? 'border-primary bg-primary/5' : 'border-border'
+              }`}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <History className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-medium">Анализ последнего рейса</h3>
@@ -717,10 +728,10 @@ const FatigueAnalysisPage = () => {
             </div>
           </div>
           
-          {/* Analysis loading overlay - keep the same design as in the example */}
+          {/* Analysis loading overlay - updated with blurred background instead of white */}
           {analysisProgress.loading && (
-            <div className="fixed inset-0 bg-white/90 backdrop-blur-[4px] z-50 flex items-center justify-center">
-              <div className="bg-white p-8 rounded-2xl shadow-lg min-w-[300px] text-center">
+            <div className="fixed inset-0 backdrop-blur-md bg-black/30 z-50 flex items-center justify-center">
+              <div className="bg-background/80 backdrop-blur p-8 rounded-2xl shadow-lg min-w-[300px] text-center border border-border/50">
                 <div className="relative w-16 h-16 mx-auto">
                   <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-20"></div>
                   <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
