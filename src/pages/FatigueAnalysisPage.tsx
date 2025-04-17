@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ const sampleHistoryData = [
   { analysis_id: 1, neural_network_score: 0.65, analysis_date: "15 апр 2025, 14:30" },
   { analysis_id: 2, neural_network_score: 0.48, analysis_date: "12 апр 2025, 09:15" },
   { analysis_id: 3, neural_network_score: 0.72, analysis_date: "8 апр 2025, 18:22" },
-  { analysis_id: 4, neural_network_score: 0.35, analysis_date: "5 апр 2025, 11:45" },
+  { analysis_id: 4, neural_network_score: 0.35, analysis_date: "5 апр 2025, 11:45" }
 ];
 
 // Type definitions
@@ -793,3 +794,64 @@ const FatigueAnalysisPage = () => {
                           'text-emerald-500'} 
                         transition-all duration-1000
                       `}
+                    />
+                  </svg>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                    <span className="text-lg font-bold">
+                      {Math.round((analysisResult.neural_network_score || 0) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <span className="text-muted-foreground">Оценка системы:</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <div 
+                      key={star}
+                      className="relative cursor-pointer transition-transform hover:scale-110"
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      onClick={() => setFeedbackScore(star)}
+                    >
+                      <Star
+                        className={`h-6 w-6 ${
+                          star <= (hoveredStar || feedbackScore) 
+                            ? 'text-amber-400 fill-amber-400' 
+                            : 'text-gray-300'
+                        }`}
+                      />
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap">
+                        {STAR_LABELS[star - 1]}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {analysisResult.video_path && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Запись:</h4>
+                  <video 
+                    controls 
+                    src={analysisResult.video_path}
+                    className="w-full rounded-md bg-black aspect-video"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <Button onClick={submitFeedback}>
+                  Отправить оценку
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default FatigueAnalysisPage;
