@@ -440,7 +440,7 @@ const FatigueAnalysisPage = () => {
         >
           <Brain className="mr-2 h-4 w-4" />
           Начать анализ
-          {recording && <span className="recording-indicator">● Запись</span>}
+          {recording && <span className="inline-block animate-pulse text-white ml-2">● Запись</span>}
         </Button>
       </div>
 
@@ -793,5 +793,3 @@ const FatigueAnalysisPage = () => {
                           'text-emerald-500'} 
                         transition-all duration-1000
                       `}
-                    />
-                  </svg>
