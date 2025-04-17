@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ import {
   Star
 } from "lucide-react";
 import axios from "axios";
-import "../FatigueAnalysis.css";
 
 // Sample data
 const monthlyFatigueData = [
@@ -427,7 +425,7 @@ const FatigueAnalysisPage = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in p-6 fatigue-container">
+    <div className="space-y-8 animate-fade-in p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Анализ усталости</h1>
@@ -652,13 +650,14 @@ const FatigueAnalysisPage = () => {
 
       {/* Модальное окно выбора типа анализа */}
       <Dialog open={analysisMode !== null} onOpenChange={() => setAnalysisMode(null)}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Выберите тип анализа</DialogTitle>
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="text-xl font-semibold">Выберите тип анализа</DialogTitle>
           </DialogHeader>
-          <div className="mode-selector">
-            <div className={`mode-option ${analysisMode === 'realtime' ? 'active' : ''}`}>
-              <div className="flex items-center gap-3 mb-3">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 pt-2">
+            <div className={`p-6 border rounded-lg transition-all duration-200 ${analysisMode === 'realtime' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <div className="flex items-center gap-3 mb-4">
                 <Video className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-medium">Реальный анализ</h3>
               </div>
@@ -666,6 +665,7 @@ const FatigueAnalysisPage = () => {
               {recording ? (
                 <Button variant="destructive" onClick={stopRecording} className="w-full">
                   Остановить запись
+                  {recording && <span className="ml-2 inline-block animate-pulse text-white">●</span>}
                 </Button>
               ) : (
                 <Button onClick={startRecording} className="w-full">
@@ -674,34 +674,36 @@ const FatigueAnalysisPage = () => {
               )}
               
               {analysisMode === 'realtime' && (
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  muted 
-                  playsInline 
-                  className="video-preview mt-3"
-                  style={{ display: recording ? 'block' : 'none' }}
-                />
+                <div className="mt-4">
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    className="w-full rounded-md bg-black aspect-video"
+                    style={{ display: recording ? 'block' : 'none' }}
+                  />
+                </div>
               )}
               
               {cameraError && (
-                <div className="mt-3 p-3 bg-rose-50 text-rose-600 rounded-md">
+                <div className="mt-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                   {cameraError}
                 </div>
               )}
             </div>
 
-            <div className={`mode-option ${analysisMode === 'flight' ? 'active' : ''}`}>
-              <div className="flex items-center gap-3 mb-3">
+            <div className={`p-6 border rounded-lg transition-all duration-200 ${analysisMode === 'flight' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <div className="flex items-center gap-3 mb-4">
                 <History className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-medium">Анализ последнего рейса</h3>
               </div>
               
               {lastFlight && (
-                <p className="mb-4 text-muted-foreground">
-                  {lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'} (
-                  {formatDate(lastFlight.departure_time)})
-                </p>
+                <div className="mb-4 text-muted-foreground">
+                  <p>{lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'}</p>
+                  <p className="text-sm">({formatDate(lastFlight.departure_time)})</p>
+                </div>
               )}
               
               <Button 
@@ -714,19 +716,20 @@ const FatigueAnalysisPage = () => {
             </div>
           </div>
           
-          {/* Оверлей загрузки */}
+          {/* Analysis loading overlay - keep the same design as in the example */}
           {analysisProgress.loading && (
-            <div className="analysis-overlay">
-              <div className="analysis-progress">
+            <div className="fixed inset-0 bg-white/90 backdrop-blur-[4px] z-50 flex items-center justify-center">
+              <div className="bg-white p-8 rounded-2xl shadow-lg min-w-[300px] text-center">
                 <div className="relative w-16 h-16 mx-auto">
                   <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-20"></div>
                   <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
                   <Brain className="absolute inset-0 m-auto h-8 w-8 text-primary animate-pulse" />
                 </div>
-                <div className="progress-text">
-                  <h3 className="font-medium">{analysisProgress.message}</h3>
+                
+                <div className="mt-6">
+                  <h3 className="font-medium text-lg">{analysisProgress.message}</h3>
                   <Progress value={analysisProgress.percent} className="h-2 mt-3" />
-                  <p>{analysisProgress.percent}% завершено</p>
+                  <p className="mt-2 text-muted-foreground">{analysisProgress.percent}% завершено</p>
                 </div>
               </div>
             </div>
@@ -734,29 +737,36 @@ const FatigueAnalysisPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Модальное окно результатов анализа */}
+      {/* Results dialog - keep the existing design but adjust styling to better match example */}
       <Dialog open={analysisResult !== null} onOpenChange={(open) => !open && setAnalysisResult(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Результаты анализа</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Результаты анализа</DialogTitle>
           </DialogHeader>
           
           {analysisResult && (
-            <div className="results">
-              <div className="result-item">
-                <span>ID анализа:</span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <span className="text-muted-foreground">ID анализа:</span>
                 <strong>#{analysisResult.analysis_id || 'неизвестно'}</strong>
               </div>
               
-              <div className="result-item">
-                <span>Уровень усталости:</span>
-                <strong className={`status-${analysisResult.fatigue_level?.toLowerCase() || 'unknown'}`}>
-                  {analysisResult.fatigue_level || 'Нет данных'}
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <span className="text-muted-foreground">Уровень усталости:</span>
+                <strong className={`
+                  ${analysisResult.fatigue_level?.toLowerCase() === 'high' ? 'text-rose-500' : 
+                    analysisResult.fatigue_level?.toLowerCase() === 'medium' ? 'text-amber-500' : 
+                    'text-emerald-500'}
+                `}>
+                  {analysisResult.fatigue_level === 'High' ? 'Высокий' : 
+                   analysisResult.fatigue_level === 'Medium' ? 'Средний' : 
+                   analysisResult.fatigue_level === 'Low' ? 'Низкий' : 
+                   'Нет данных'}
                 </strong>
               </div>
 
-              <div className="result-item">
-                <span>Точность модели:</span>
+              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                <span className="text-muted-foreground">Точность модели:</span>
                 <div className="relative w-20 h-20">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle
@@ -785,65 +795,3 @@ const FatigueAnalysisPage = () => {
                       `}
                     />
                   </svg>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                    <span className="text-xl font-bold">
-                      {Math.round((analysisResult.neural_network_score || 0) * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="result-item">
-                <span>Оценка системы:</span>
-                <div className="star-rating">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <div 
-                      key={star}
-                      className="star-wrapper"
-                      onMouseEnter={() => setHoveredStar(star)}
-                      onMouseLeave={() => setHoveredStar(0)}
-                      onClick={() => setFeedbackScore(star)}
-                    >
-                      <Star
-                        fill={star <= (hoveredStar || feedbackScore) ? "#facc15" : "none"}
-                        className={`
-                          h-6 w-6
-                          ${star <= (hoveredStar || feedbackScore) ? 'text-yellow-400' : 'text-gray-300'}
-                          transition-colors
-                        `}
-                      />
-                      <div className="star-tooltip">
-                        {STAR_LABELS[star - 1]}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {analysisResult.video_path && (
-                <div className="video-review">
-                  <video 
-                    controls 
-                    src={analysisResult.video_path}
-                    className="video-preview"
-                  />
-                </div>
-              )}
-              
-              <div className="flex justify-end gap-3 mt-4">
-                <Button variant="outline" onClick={() => setAnalysisResult(null)}>
-                  Закрыть
-                </Button>
-                <Button onClick={submitFeedback}>
-                  Отправить оценку
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default FatigueAnalysisPage;
