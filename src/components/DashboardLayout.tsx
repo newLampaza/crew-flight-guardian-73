@@ -32,7 +32,6 @@ const DashboardLayout: React.FC = () => {
   const renderNavItems = () => {
     let navItems = [];
     
-    // Формируем пункты меню в зависимости от роли пользователя
     if (isPilot()) {
       navItems = [
         { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
@@ -63,8 +62,8 @@ const DashboardLayout: React.FC = () => {
         to={item.to}
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-accent",
-            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-sidebar-accent",
+            isActive ? "bg-sidebar-accent" : "text-sidebar-foreground/70"
           )
         }
         onClick={() => isMobile && setIsSidebarOpen(false)}
@@ -79,13 +78,13 @@ const DashboardLayout: React.FC = () => {
     <div className="flex min-h-screen">
       <div
         className={cn(
-          "fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-300 ease-in-out",
+          "fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-sidebar transition-transform duration-300 ease-in-out text-sidebar-foreground",
           isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"
         )}
       >
         {isMobile && (
           <button
-            className="absolute -right-9 top-2 rounded-r-full border border-l-0 bg-background p-2 text-muted-foreground"
+            className="absolute -right-10 top-2 rounded-r-md border border-l-0 bg-sidebar p-2 text-sidebar-foreground"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             <svg
@@ -98,15 +97,16 @@ const DashboardLayout: React.FC = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={isSidebarOpen ? "rotate-180" : ""}
             >
-              <path d="m9 18 6-6-6-6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="18" x2="20" y2="18" />
             </svg>
           </button>
         )}
 
         <div className="flex items-center gap-2 border-b px-4 py-4">
-          <PlaneTakeoff className="h-6 w-6 text-primary" />
+          <PlaneTakeoff className="h-6 w-6 text-sidebar-foreground" />
           <span className="font-semibold tracking-tight">FatigueGuard</span>
         </div>
         <nav className="flex-1 overflow-auto p-4">
@@ -121,14 +121,14 @@ const DashboardLayout: React.FC = () => {
               </Avatar>
               <div>
                 <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-muted-foreground">{user?.position}</p>
+                <p className="text-xs text-sidebar-foreground/70">{user?.position}</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={logout}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <LogOut className="h-5 w-5" />
             </Button>
