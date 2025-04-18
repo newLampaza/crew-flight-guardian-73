@@ -1,171 +1,193 @@
 
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useTheme } from "@/components/theme-provider";
+import React from "react";
+import { Outlet, NavLink } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   PlaneTakeoff,
-  LayoutDashboard,
+  Home,
   Calendar,
-  Brain,
+  Activity,
+  FileText,
   MessageSquare,
-  BookOpen,
-  LineChart,
   Settings,
-  Menu,
-  X,
-  Moon,
-  Sun
+  LogOut,
+  Brain,
+  FileBarChart,
+  Server,
+  UserCog,
+  ClipboardCheck,
+  HeartPulse,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMobile } from "@/hooks/use-mobile";
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
+const DashboardLayout: React.FC = () => {
+  const { user, logout, isAdmin, isMedical, isPilot } = useAuth();
+  const { isMobile, setIsSidebarOpen, isSidebarOpen } = useMobile();
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Функция для отображения разных наборов меню в зависимости от роли
+  const renderNavItems = () => {
+    // Базовое меню для всех пользователей
+    const baseNavItems = [
+      { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
+      { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" },
+    ];
 
-  const navItems = [
-    { 
-      name: "Главная", 
-      icon: <LayoutDashboard className="h-5 w-5" />, 
-      path: "/" 
-    },
-    { 
-      name: "Расписание полетов", 
-      icon: <Calendar className="h-5 w-5" />, 
-      path: "/schedule" 
-    },
-    { 
-      name: "Когнитивные тесты", 
-      icon: <Brain className="h-5 w-5" />, 
-      path: "/cognitive-tests" 
-    },
-    { 
-      name: "Отзывы", 
-      icon: <MessageSquare className="h-5 w-5" />, 
-      path: "/feedback" 
-    },
-    { 
-      name: "Учебные материалы", 
-      icon: <BookOpen className="h-5 w-5" />, 
-      path: "/training" 
-    },
-    { 
-      name: "Анализ усталости", 
-      icon: <LineChart className="h-5 w-5" />, 
-      path: "/fatigue-analysis" 
-    },
-    { 
-      name: "Настройки", 
-      icon: <Settings className="h-5 w-5" />, 
-      path: "/settings" 
+    // Меню для пилотов
+    const pilotNavItems = [
+      { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
+      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
+      { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
+      { to: "/training", icon: <FileText className="h-5 w-5" />, label: "Обучение" },
+      { to: "/feedback", icon: <MessageSquare className="h-5 w-5" />, label: "Отзывы" },
+    ];
+
+    // Меню для администраторов
+    const adminNavItems = [
+      { to: "/admin", icon: <Server className="h-5 w-5" />, label: "Панель администратора" },
+      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
+      { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
+      { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
+    ];
+
+    // Меню для медицинских работников
+    const medicalNavItems = [
+      { to: "/medical", icon: <HeartPulse className="h-5 w-5" />, label: "Медицинская панель" },
+      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
+      { to: "/cognitive-tests", icon: <ClipboardCheck className="h-5 w-5" />, label: "Тесты" },
+    ];
+
+    let navItems = [...baseNavItems];
+
+    if (isPilot()) {
+      navItems = [...pilotNavItems, ...baseNavItems];
+    } else if (isAdmin()) {
+      navItems = [...adminNavItems, ...baseNavItems];
+    } else if (isMedical()) {
+      navItems = [...medicalNavItems, ...baseNavItems];
     }
-  ];
 
-  // Close sidebar when route changes
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location.pathname]);
-
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    setSidebarOpen(false);
-  };
-
-  const { theme, setTheme } = useTheme();
-
-  // Функция переключения темы с проверкой актуального состояния
-  const toggleTheme = () => {
-    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    setTheme(currentTheme === "dark" ? "light" : "dark");
+    return navItems.map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-accent",
+            isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+          )
+        }
+        onClick={() => isMobile && setIsSidebarOpen(false)}
+      >
+        {item.icon}
+        <span>{item.label}</span>
+      </NavLink>
+    ));
   };
 
   return (
-    <div className="flex min-h-screen bg-background relative">
-      {/* Backdrop blur when sidebar is open */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } bg-sidebar`}
+    <div className="flex min-h-screen">
+      {/* Sidebar/Mobile Menu */}
+      <div
+        className={cn(
+          "fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-300 ease-in-out",
+          isMobile && !isSidebarOpen ? "-translate-x-full" : "translate-x-0"
+        )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2 text-white" onClick={() => setSidebarOpen(false)}>
-            <PlaneTakeoff className="h-6 w-6" />
-            <span className="text-lg font-bold">FatigueGuard</span>
-          </Link>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-white lg:hidden" 
-            onClick={() => setSidebarOpen(false)}
+        {isMobile && (
+          <button
+            className="absolute -right-9 top-2 rounded-r-full border border-l-0 bg-background p-2 text-muted-foreground"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <nav className="mt-6 px-4 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => handleNavigate(item.path)}
-              className={`flex w-full items-center gap-3 rounded-md py-2 px-3 transition-colors ${
-                location.pathname === item.path
-                  ? "bg-sidebar-primary text-white"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              }`}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isSidebarOpen ? "rotate-180" : ""}
             >
-              {item.icon}
-              <span>{item.name}</span>
-            </button>
-          ))}
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        )}
+
+        <div className="flex items-center gap-2 border-b px-4 py-4">
+          <PlaneTakeoff className="h-6 w-6 text-primary" />
+          <span className="font-semibold tracking-tight">FatigueGuard</span>
+        </div>
+        <nav className="flex-1 overflow-auto p-4">
+          <div className="space-y-1">{renderNavItems()}</div>
         </nav>
-      </aside>
+        <div className="border-t p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{user?.position}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-card shadow-sm z-10">
-          <div className="flex h-16 items-center justify-between px-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden" 
-              onClick={() => setSidebarOpen(true)}
+      <div
+        className={cn(
+          "flex flex-1 flex-col",
+          isMobile ? "ml-0" : "ml-64"
+        )}
+      >
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="mr-2"
             >
-              <Menu className="h-5 w-5" />
-            </Button>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                {document.documentElement.classList.contains('dark') ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </Button>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
           </div>
         </header>
-
-        <main className="flex-1 overflow-auto p-4 lg:p-6 bg-background">
-          {children}
+        <main className="flex-1 p-6">
+          <Outlet />
         </main>
       </div>
     </div>

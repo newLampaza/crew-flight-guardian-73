@@ -3,10 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 
-interface User {
+export type UserRole = "pilot" | "admin" | "medical";
+
+export interface User {
   id: string;
   name: string;
-  role: string;
+  role: UserRole;
   position: string;
   avatarUrl: string;
 }
@@ -17,15 +19,34 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  isAdmin: () => boolean;
+  isMedical: () => boolean;
+  isPilot: () => boolean;
 }
 
-// Sample user data - in a real application, this would come from a backend
-const SAMPLE_USER: User = {
-  id: "1",
-  name: "Иван Петров",
-  role: "Пилот",
-  position: "Капитан",
-  avatarUrl: "/pilot-avatar.jpg"
+// Добавляем тестовых пользователей для разных ролей
+const SAMPLE_USERS: Record<string, User> = {
+  pilot: {
+    id: "1",
+    name: "Иван Петров",
+    role: "pilot",
+    position: "Капитан",
+    avatarUrl: "/pilot-avatar.jpg"
+  },
+  admin: {
+    id: "2",
+    name: "Алексей Сидоров",
+    role: "admin",
+    position: "Системный администратор",
+    avatarUrl: "/admin-avatar.jpg"
+  },
+  medical: {
+    id: "3",
+    name: "Елена Иванова",
+    role: "medical",
+    position: "Медицинский специалист",
+    avatarUrl: "/medical-avatar.jpg"
+  }
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,13 +71,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => {
-        // In a real app, validate credentials against a backend
-        if (username === "pilot" && password === "password") {
-          setUser(SAMPLE_USER);
-          localStorage.setItem("fatigue-guard-user", JSON.stringify(SAMPLE_USER));
+        // Проверяем, есть ли пользователь с таким именем
+        const validUsernames = Object.keys(SAMPLE_USERS);
+        if (validUsernames.includes(username) && password === "password") {
+          const user = SAMPLE_USERS[username];
+          setUser(user);
+          localStorage.setItem("fatigue-guard-user", JSON.stringify(user));
           toast({
             title: "Вход выполнен успешно",
-            description: `Добро пожаловать, ${SAMPLE_USER.name}`,
+            description: `Добро пожаловать, ${user.name}`,
           });
           setLoading(false);
           resolve(true);
@@ -83,6 +106,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Вспомогательные функции для проверки роли
+  const isAdmin = () => user?.role === "admin";
+  const isMedical = () => user?.role === "medical";
+  const isPilot = () => user?.role === "pilot";
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         loading,
+        isAdmin,
+        isMedical,
+        isPilot
       }}
     >
       {children}

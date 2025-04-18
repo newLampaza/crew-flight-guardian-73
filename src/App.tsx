@@ -1,104 +1,70 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import DashboardLayout from "@/components/DashboardLayout";
-import { ThemeProvider } from "@/components/theme-provider";
 
-// Pages
+import { Routes, Route, BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "@/components/ui/toaster";
 import LoginPage from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
+import FatigueAnalysisPage from "@/pages/FatigueAnalysisPage";
 import SchedulePage from "@/pages/SchedulePage";
 import CognitiveTestsPage from "@/pages/CognitiveTestsPage";
+import TrainingPage from "@/pages/TrainingPage";
+import FeedbackPage from "@/pages/FeedbackPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
+import ForbiddenPage from "@/pages/ForbiddenPage";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import RoleProtectedRoute from "@/components/RoleProtectedRoute";
+import DashboardLayout from "@/components/DashboardLayout";
+import AdminDashboard from "@/pages/AdminDashboard";
+import MedicalDashboard from "@/pages/MedicalDashboard";
+import { ThemeProvider } from "@/components/theme-provider";
 
-// Placeholder pages - these would be implemented fully in a complete app
-import FeedbackPage from "@/pages/FeedbackPage";
-import TrainingPage from "@/pages/TrainingPage";
-import FatigueAnalysisPage from "@/pages/FatigueAnalysisPage";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
+function App() {
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="fatigue-guard-theme">
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/forbidden" element={<ForbiddenPage />} />
             
-              {/* Protected routes with DashboardLayout */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Dashboard />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
+            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/fatigue-analysis" element={<FatigueAnalysisPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/cognitive-tests" element={<CognitiveTestsPage />} />
+              <Route path="/training" element={<TrainingPage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              
+              {/* Маршрут для администратора */}
+              <Route 
+                path="/admin" 
+                element={
+                  <RoleProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </RoleProtectedRoute>
+                } 
+              />
+              
+              {/* Маршрут для медицинского работника */}
+              <Route 
+                path="/medical" 
+                element={
+                  <RoleProtectedRoute allowedRoles={["medical"]}>
+                    <MedicalDashboard />
+                  </RoleProtectedRoute>
+                } 
+              />
+            </Route>
             
-              <Route path="/schedule" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <SchedulePage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              <Route path="/cognitive-tests" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <CognitiveTestsPage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              <Route path="/feedback" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <FeedbackPage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              <Route path="/training" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <TrainingPage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              <Route path="/fatigue-analysis" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <FatigueAnalysisPage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <SettingsPage />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            
-              {/* Redirect to login if not found or not authorized */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </AuthProvider>
+      </BrowserRouter>
     </ThemeProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;

@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaneTakeoff } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>("pilot");
   const { login } = useAuth();
   const navigate = useNavigate();
   const { theme } = useTheme();
@@ -32,9 +34,19 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     
-    const success = await login(username, password);
+    // Устанавливаем имя пользователя в зависимости от выбранной роли
+    const userLogin = selectedRole; // pilot, admin или medical
+    
+    const success = await login(userLogin, password);
     if (success) {
-      navigate("/");
+      // Направляем на соответствующую страницу в зависимости от роли
+      if (selectedRole === "admin") {
+        navigate("/admin");
+      } else if (selectedRole === "medical") {
+        navigate("/medical");
+      } else {
+        navigate("/");
+      }
     }
     
     setLoading(false);
@@ -56,26 +68,34 @@ const LoginPage = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              <Tabs defaultValue="pilot" value={selectedRole} onValueChange={setSelectedRole} className="w-full">
+                <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsTrigger value="pilot">Пилот</TabsTrigger>
+                  <TabsTrigger value="admin">Администратор</TabsTrigger>
+                  <TabsTrigger value="medical">Медработник</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="pilot">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Интерфейс пилота для анализа усталости и когнитивных тестов
+                  </p>
+                </TabsContent>
+                <TabsContent value="admin">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Панель управления системой и настройки нейросети
+                  </p>
+                </TabsContent>
+                <TabsContent value="medical">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Доступ к верификации анализа и медицинским данным
+                  </p>
+                </TabsContent>
+              </Tabs>
+
               <div className="space-y-2">
-                <label htmlFor="username" className="text-sm font-medium">
-                  Имя пользователя
+                <label htmlFor="password" className="text-sm font-medium">
+                  Пароль
                 </label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Имя пользователя"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-sm font-medium">
-                    Пароль
-                  </label>
-                </div>
                 <Input
                   id="password"
                   type="password"
@@ -102,7 +122,7 @@ const LoginPage = () => {
           </form>
           
           <div className="p-4 text-center text-sm text-muted-foreground">
-            <p>Тестовые данные: пользователь "pilot", пароль "password"</p>
+            <p>Тестовые данные: пользователь "{selectedRole}", пароль "password"</p>
           </div>
         </Card>
       </div>
