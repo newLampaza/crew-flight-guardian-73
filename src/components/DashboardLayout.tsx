@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -29,40 +30,31 @@ const DashboardLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   const renderNavItems = () => {
-    const baseNavItems = [
-      { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
-      { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" },
-    ];
-
-    const pilotNavItems = [
-      { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
-      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
-      { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
-      { to: "/training", icon: <FileText className="h-5 w-5" />, label: "Обучение" },
-      { to: "/feedback", icon: <MessageSquare className="h-5 w-5" />, label: "Отзывы" },
-    ];
-
-    const adminNavItems = [
-      { to: "/admin", icon: <Server className="h-5 w-5" />, label: "Панель администратора" },
-      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
-      { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
-      { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
-    ];
-
-    const medicalNavItems = [
-      { to: "/medical", icon: <HeartPulse className="h-5 w-5" />, label: "Медицинская панель" },
-      { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
-      { to: "/cognitive-tests", icon: <ClipboardCheck className="h-5 w-5" />, label: "Тесты" },
-    ];
-
-    let navItems = [...baseNavItems];
-
+    let navItems = [];
+    
+    // Формируем пункты меню в зависимости от роли пользователя
     if (isPilot()) {
-      navItems = [...pilotNavItems, ...baseNavItems];
+      navItems = [
+        { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
+        { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
+        { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
+        { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
+        { to: "/training", icon: <FileText className="h-5 w-5" />, label: "Обучение" },
+        { to: "/feedback", icon: <MessageSquare className="h-5 w-5" />, label: "Отзывы" },
+        { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" }
+      ];
     } else if (isAdmin()) {
-      navItems = [...adminNavItems, ...baseNavItems];
+      navItems = [
+        { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
+        { to: "/admin", icon: <Server className="h-5 w-5" />, label: "Панель администратора" },
+        { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" }
+      ];
     } else if (isMedical()) {
-      navItems = [...medicalNavItems, ...baseNavItems];
+      navItems = [
+        { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
+        { to: "/medical", icon: <HeartPulse className="h-5 w-5" />, label: "Медицинская панель" },
+        { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" }
+      ];
     }
 
     return navItems.map((item) => (
