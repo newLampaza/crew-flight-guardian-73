@@ -1,7 +1,2 @@
 
-/* This file can be minimized or removed since we're using Tailwind classes directly */
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+/* This file is no longer needed as we've moved all styles to Tailwind */

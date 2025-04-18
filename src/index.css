@@ -1,42 +1,47 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    /* Base colors */
     --background: 210 50% 98%;
     --foreground: 222.2 84% 4.9%;
 
+    /* Card and popover */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 210 100% 35%;
+    /* Primary and secondary */
+    --primary: 210 100% 40%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
+    /* Muted and accent */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
+    /* Destructive */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Border and input */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
 
+    /* Sidebar */
     --sidebar-background: 210 50% 20%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 100% 35%;
+    --sidebar-primary: 210 100% 40%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 210 30% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
@@ -105,11 +110,16 @@
   p {
     @apply text-left;
   }
-}
 
-/* Особые стили для страницы входа в темной теме */
-body.dark-login {
-  background-color: hsl(222.2 84% 4.9%);
+  /* Accessibility improvements */
+  a:focus, button:focus, input:focus, select:focus, textarea:focus {
+    @apply outline-none ring-2 ring-primary ring-opacity-50;
+  }
+  
+  /* Improved keyboard navigation */
+  a:focus-visible, button:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
 }
 
 /* Status Indicators */
@@ -143,13 +153,13 @@ body.dark-login {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Card hover effects */
+/* Card hover effects with glassmorphism */
 .hover-card {
-  @apply transition-all duration-300;
+  @apply transition-all duration-300 backdrop-blur-sm;
 }
 
 .hover-card:hover {
-  @apply shadow-lg translate-y-[-2px];
+  @apply shadow-lg translate-y-[-2px] bg-white/90 dark:bg-black/20;
 }
 
 /* Fade-in animation */
@@ -166,6 +176,15 @@ body.dark-login {
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Modern glassmorphism effects */
+.glass {
+  @apply backdrop-blur-md bg-white/50 dark:bg-black/30 border border-white/20 dark:border-white/10;
+}
+
+.glass-card {
+  @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-white/20 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300;
 }
 
 /* Improved responsiveness for tablet and mobile */
@@ -201,14 +220,14 @@ body.dark-login {
     @apply whitespace-normal sm:whitespace-nowrap sm:overflow-hidden sm:text-ellipsis sm:max-w-[100px] hover:whitespace-normal hover:overflow-visible;
   }
   
-  /* Исправления для адаптивного отображения текста и статусов */
+  /* Mobile optimizations */
   .compact-mobile {
     @apply flex-col sm:flex-row text-center sm:text-left;
   }
   
   /* New tooltip utility */
   .tooltip-wrapper {
-    @apply relative;
+    @apply relative group;
   }
   
   .tooltip-text {
@@ -221,5 +240,44 @@ body.dark-login {
     .tooltip-text {
       @apply hidden;
     }
+  }
+
+  /* Skeleton loaders for better perceived performance */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+  }
+  
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+  
+  .skeleton-circle {
+    @apply skeleton rounded-full;
+  }
+  
+  .skeleton-button {
+    @apply skeleton h-10 w-24;
+  }
+  
+  .skeleton-card {
+    @apply skeleton h-32 w-full;
+  }
+  
+  /* Mobile responsiveness improvements */
+  .mobile-stack {
+    @apply flex flex-col sm:flex-row gap-4;
+  }
+  
+  .mobile-full {
+    @apply w-full sm:w-auto;
+  }
+  
+  /* Accessibility improvements */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  }
+  
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
   }
 }

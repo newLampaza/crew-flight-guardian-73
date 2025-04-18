@@ -1,20 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend,
-  ResponsiveContainer,
-  Area,
-  AreaChart
-} from "recharts";
 import { toast } from "@/components/ui/use-toast";
 import { 
   Brain, 
@@ -29,11 +17,29 @@ import {
   LineChart as LineChartIcon,
   FlaskConical,
   Scale,
-  Video,
-  History,
-  Star
 } from "lucide-react";
-import axios from "axios";
+
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from "recharts";
+
+// Import our new components
+import { VideoRecorder } from "@/components/fatigue-analysis/VideoRecorder";
+import { FlightAnalyzer } from "@/components/fatigue-analysis/FlightAnalyzer";
+import { AnalysisResult } from "@/components/fatigue-analysis/AnalysisResult";
+import { AnalysisProgress } from "@/components/fatigue-analysis/AnalysisProgress";
+import { FatigueIndicator } from "@/components/fatigue-analysis/FatigueIndicator";
+import { useMediaRecorder } from "@/hooks/useMediaRecorder";
+import { useFatigueAnalysis } from "@/hooks/useFatigueAnalysis";
 
 // Sample data
 const monthlyFatigueData = [
@@ -55,7 +61,7 @@ const indicators = [
     id: 1, 
     name: "Уровень усталости", 
     value: 65, 
-    status: "warning",
+    status: "warning" as const,
     icon: BatteryMedium,
     change: "+5%",
     details: "Повышенный уровень усталости"
@@ -64,7 +70,7 @@ const indicators = [
     id: 2, 
     name: "Время бодрствования", 
     value: "14ч 30м", 
-    status: "warning",
+    status: "warning" as const,
     icon: Timer,
     change: "+2ч",
     details: "Выше рекомендуемой нормы"
@@ -73,7 +79,7 @@ const indicators = [
     id: 3, 
     name: "Концентрация внимания", 
     value: 78, 
-    status: "success",
+    status: "success" as const,
     icon: Eye,
     change: "-2%",
     details: "В пределах нормы"
@@ -82,7 +88,7 @@ const indicators = [
     id: 4, 
     name: "Качество сна", 
     value: "6ч 15м", 
-    status: "error",
+    status: "error" as const,
     icon: Coffee,
     change: "-1ч 45м",
     details: "Ниже рекомендуемой нормы"
@@ -97,301 +103,47 @@ const sampleHistoryData = [
   { analysis_id: 4, neural_network_score: 0.35, analysis_date: "5 апр 2025, 11:45" }
 ];
 
-// Type definitions
-interface AnalysisResult {
-  analysis_id?: number;
-  fatigue_level?: string;
-  neural_network_score?: number;
-  analysis_date?: string;
-  feedback_score?: number;
-  video_path?: string;
-  from_code?: string;
-  to_code?: string;
-  resolution?: string;
-  fps?: number;
-}
-
-interface Flight {
-  flight_id?: number;
-  from_code?: string;
-  to_code?: string;
-  departure_time?: string;
-  video_path?: string;
-}
-
-const STAR_LABELS = [
-  'Очень плохо',
-  'Плохо',
-  'Удовлетворительно',
-  'Хорошо',
-  'Отлично'
-];
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
 const FatigueAnalysisPage = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // State for the analysis mode and related data
   const [analysisMode, setAnalysisMode] = useState<'realtime' | 'flight' | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [feedbackScore, setFeedbackScore] = useState(3);
-  const [historyData, setHistoryData] = useState<AnalysisResult[]>(sampleHistoryData);
-  const [lastFlight, setLastFlight] = useState<Flight | null>({
+  const [historyData, setHistoryData] = useState(sampleHistoryData);
+  const [lastFlight, setLastFlight] = useState({
     flight_id: 1,
     from_code: "SVO",
     to_code: "LED",
     departure_time: "2025-04-15T14:30:00",
     video_path: "/videos/test.mp4"
   });
-  const [cameraError, setCameraError] = useState('');
-  const [recording, setRecording] = useState(false);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const chunks = useRef<Blob[]>([]);
-  const [hoveredStar, setHoveredStar] = useState(0);
+
+  // Use our custom hooks
+  const { 
+    analysisResult, 
+    setAnalysisResult, 
+    analysisProgress, 
+    submitRecording, 
+    analyzeFlight,
+    formatDate
+  } = useFatigueAnalysis((result) => {
+    // Add the new analysis to the history data when successful
+    setHistoryData(prev => [{
+      analysis_id: result.analysis_id || Math.floor(Math.random() * 1000) + 1,
+      neural_network_score: result.neural_network_score || Math.random(),
+      analysis_date: formatDate(result.analysis_date || new Date().toISOString())
+    }, ...prev]);
+  });
   
-  const [analysisProgress, setAnalysisProgress] = useState({
-    loading: false,
-    message: '',
-    percent: 0,
+  const { 
+    videoRef, 
+    recording, 
+    cameraError, 
+    startRecording, 
+    stopRecording 
+  } = useMediaRecorder({ 
+    onRecordingComplete: submitRecording 
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "success": return "text-emerald-500";
-      case "warning": return "text-amber-500";
-      case "error": return "text-rose-500";
-      default: return "text-slate-500";
-    }
-  };
-
-  const getStatusBg = (status: string) => {
-    switch (status) {
-      case "success": return "bg-emerald-50 dark:bg-emerald-500/10";
-      case "warning": return "bg-amber-50 dark:bg-amber-500/10";
-      case "error": return "bg-rose-50 dark:bg-rose-500/10";
-      default: return "bg-slate-50 dark:bg-slate-500/10";
-    }
-  };
-
-  const getProgressStatus = (score?: number) => {
-    const value = score || 0;
-    if (value > 0.7) return "error";
-    if (value > 0.4) return "warning";
-    return "success";
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: 640,
-          height: 480,
-          facingMode: 'user'
-        }
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
-      const options = { 
-        mimeType: 'video/webm; codecs=vp9',
-        videoBitsPerSecond: 2500000
-      };
-
-      mediaRecorder.current = new MediaRecorder(stream, options);
-      
-      mediaRecorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'video/webm' });
-        submitRecording(blob);
-        chunks.current = [];
-      };
-
-      mediaRecorder.current.start(100);
-      setRecording(true);
-
-      // Автоматически прекращаем запись через 30 секунд
-      setTimeout(() => {
-        if (mediaRecorder.current?.state === 'recording') {
-          mediaRecorder.current.stop();
-        }
-      }, 30000);
-
-    } catch (error) {
-      setCameraError('Для анализа требуется доступ к камере');
-      toast({
-        title: "Ошибка доступа к камере",
-        description: error instanceof Error ? error.message : "Неизвестная ошибка",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder.current?.state === 'recording') {
-      mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
-      setRecording(false);
-    }
-  };
-
-  const submitRecording = async (blob: Blob) => {
-    try {
-      setAnalysisProgress({
-        loading: true,
-        message: 'Обработка видео...',
-        percent: 20,
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (!blob || blob.size === 0) {
-        throw new Error('Записанное видео слишком короткое или повреждено');
-      }
-
-      const formData = new FormData();
-      formData.append('video', blob, `recording_${Date.now()}.webm`);
-
-      // Имитация запроса к API
-      // В реальной ситуации это был бы настоящий запрос
-      // const response = await axios.post('/api/fatigue/analyze', formData);
-      
-      setAnalysisProgress({
-        loading: true,
-        message: 'Анализ нейросетью...',
-        percent: 80,
-      });
-  
-      // Имитация прогресса анализа
-      const interval = setInterval(() => {
-        setAnalysisProgress(p => ({
-          ...p,
-          percent: Math.min(p.percent + 1, 95),
-        }));
-      }, 100);
-  
-      // Окончание анализа (имитация)
-      setTimeout(() => {
-        clearInterval(interval);
-        setAnalysisProgress(p => ({...p, percent: 100}));
-        setTimeout(() => {
-          setAnalysisProgress({loading: false, message: '', percent: 0});
-          
-          // Мок-данные результата анализа
-          setAnalysisResult({
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString()),
-            video_path: '/videos/test.mp4'
-          });
-          
-          // Добавляем анализ в историю
-          setHistoryData(prev => [{
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString())
-          }, ...prev]);
-          
-        }, 500);
-      }, 2000);
-      
-    } catch (error) {
-      setAnalysisProgress({loading: false, message: '', percent: 0});
-      toast({
-        title: "Ошибка анализа",
-        description: error instanceof Error ? error.message : "Неизвестная ошибка",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const analyzeFlight = async () => {
-    try {
-      setAnalysisProgress({
-        loading: true,
-        message: 'Обработка видео...',
-        percent: 20,
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Имитация запроса к API
-      // В реальной ситуации это был бы настоящий запрос
-      // const response = await axios.post('/api/fatigue/analyze-flight', { flight_id: lastFlight?.flight_id });
-
-      setAnalysisProgress({
-        loading: true,
-        message: 'Анализ нейросетью...',
-        percent: 80,
-      });
-
-      const interval = setInterval(() => {
-        setAnalysisProgress(p => ({
-          ...p,
-          percent: Math.min(p.percent + 1, 95),
-        }));
-      }, 100);
-
-      setTimeout(() => {
-        clearInterval(interval);
-        setAnalysisProgress(p => ({...p, percent: 100}));
-        setTimeout(() => {
-          setAnalysisProgress({loading: false, message: '', percent: 0});
-          
-          // Мок-данные результата анализа
-          setAnalysisResult({
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString()),
-            from_code: lastFlight?.from_code,
-            to_code: lastFlight?.to_code,
-            video_path: lastFlight?.video_path
-          });
-          
-          // Добавляем анализ в историю
-          setHistoryData(prev => [{
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString())
-          }, ...prev]);
-          
-        }, 500);
-      }, 2000);
-
-    } catch (error) {
-      setAnalysisProgress({loading: false, message: '', percent: 0});
-      toast({
-        title: "Ошибка анализа рейса",
-        description: error instanceof Error ? error.message : "Неизвестная ошибка",
-        variant: "destructive"
-      });
-    }
-  };
-
+  // Handle feedback submission
   const submitFeedback = async () => {
     if (!analysisResult?.analysis_id) {
       toast({
@@ -403,7 +155,8 @@ const FatigueAnalysisPage = () => {
     }
     
     try {
-      // Имитация отправки отзыва
+      // Имитация отправки отзыва в демонстрационных целях
+      // В реальном приложении здесь был бы настоящий запрос к API
       // await axios.post('/api/fatigue/feedback', {
       //   analysis_id: analysisResult.analysis_id,
       //   score: feedbackScore
@@ -422,6 +175,10 @@ const FatigueAnalysisPage = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleAnalyzeFlight = () => {
+    analyzeFlight(lastFlight);
   };
 
   return (
@@ -444,41 +201,18 @@ const FatigueAnalysisPage = () => {
         </Button>
       </div>
 
+      {/* Indicators Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {indicators.map((indicator) => (
+        {indicators.map(indicator => (
           <Card key={indicator.id} className="hover:shadow-lg transition-all duration-200">
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className={`${getStatusBg(indicator.status)} p-3 rounded-lg`}>
-                  <indicator.icon className={`h-6 w-6 ${getStatusColor(indicator.status)}`} />
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className={`text-sm ${
-                    indicator.change.startsWith('+') ? 'text-rose-500' : 'text-emerald-500'
-                  }`}>
-                    {indicator.change}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <h3 className="font-medium text-sm text-muted-foreground">
-                  {indicator.name}
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold">
-                    {typeof indicator.value === 'number' ? `${indicator.value}%` : indicator.value}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {indicator.details}
-                </p>
-              </div>
+            <CardContent className="p-0">
+              <FatigueIndicator indicator={indicator} />
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Charts & Status Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 hover:shadow-lg transition-all duration-200">
           <CardHeader>
@@ -559,6 +293,7 @@ const FatigueAnalysisPage = () => {
           </CardContent>
         </Card>
 
+        {/* Status Cards */}
         <div className="space-y-6">
           <Card className="hover:shadow-lg transition-all duration-200">
             <CardHeader>
@@ -618,6 +353,7 @@ const FatigueAnalysisPage = () => {
             </CardContent>
           </Card>
 
+          {/* History Card */}
           <Card className="hover:shadow-lg transition-all duration-200 overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -648,7 +384,7 @@ const FatigueAnalysisPage = () => {
         </div>
       </div>
 
-      {/* Модальное окно выбора типа анализа */}
+      {/* Analysis Mode Dialog */}
       <Dialog open={analysisMode !== null} onOpenChange={() => setAnalysisMode(null)}>
         <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
           <DialogHeader className="p-6 pb-2">
@@ -656,100 +392,34 @@ const FatigueAnalysisPage = () => {
           </DialogHeader>
           
           <div className="flex flex-col gap-6 p-6 pt-2">
-            {/* Realtime analysis block - moved to the top and expanded */}
-            <div 
-              className={`p-6 border rounded-lg transition-all duration-200 ${
-                analysisMode === 'realtime' ? 'border-primary bg-primary/5' : 'border-border'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <Video className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-medium">Реальный анализ</h3>
-              </div>
-              
-              {recording ? (
-                <Button variant="destructive" onClick={stopRecording} className="w-full mb-4">
-                  Остановить запись
-                  {recording && <span className="ml-2 inline-block animate-pulse text-white">●</span>}
-                </Button>
-              ) : (
-                <Button onClick={startRecording} className="w-full mb-4">
-                  {analysisResult ? 'Повторить запись' : 'Начать запись (30 сек)'}
-                </Button>
-              )}
-              
-              {/* Larger camera display with smooth transition */}
-              <div 
-                className={`mt-4 transition-all duration-500 ease-in-out transform ${
-                  recording ? 'opacity-100 scale-100 max-h-[50vh]' : 'opacity-0 scale-95 max-h-0 overflow-hidden'
-                }`}
-              >
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  muted 
-                  playsInline 
-                  className="w-full rounded-md bg-black aspect-video shadow-lg"
-                />
-              </div>
-              
-              {cameraError && (
-                <div className="mt-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-                  {cameraError}
-                </div>
-              )}
-            </div>
+            {/* Real-time analysis block using our new VideoRecorder component */}
+            <VideoRecorder
+              recording={recording}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              analysisResult={analysisResult}
+              cameraError={cameraError}
+              videoRef={videoRef}
+            />
 
-            {/* Flight analysis block - moved below */}
-            <div 
-              className={`p-6 border rounded-lg transition-all duration-200 ${
-                analysisMode === 'flight' ? 'border-primary bg-primary/5' : 'border-border'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <History className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-medium">Анализ последнего рейса</h3>
-              </div>
-              
-              {lastFlight && (
-                <div className="mb-4 text-muted-foreground">
-                  <p>{lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'}</p>
-                  <p className="text-sm">({formatDate(lastFlight.departure_time)})</p>
-                </div>
-              )}
-              
-              <Button 
-                onClick={analyzeFlight}
-                disabled={!lastFlight?.video_path}
-                className="w-full"
-              >
-                Проанализировать
-              </Button>
-            </div>
+            {/* Flight analysis block using our new FlightAnalyzer component */}
+            <FlightAnalyzer
+              lastFlight={lastFlight}
+              onAnalyzeFlight={handleAnalyzeFlight}
+              formatDate={formatDate}
+            />
           </div>
           
-          {/* Analysis loading overlay - updated with blurred background instead of white */}
-          {analysisProgress.loading && (
-            <div className="fixed inset-0 backdrop-blur-md bg-black/30 z-50 flex items-center justify-center">
-              <div className="bg-background/80 backdrop-blur p-8 rounded-2xl shadow-lg min-w-[300px] text-center border border-border/50">
-                <div className="relative w-16 h-16 mx-auto">
-                  <div className="absolute inset-0 rounded-full border-4 border-primary border-opacity-20"></div>
-                  <div className="absolute inset-0 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                  <Brain className="absolute inset-0 m-auto h-8 w-8 text-primary animate-pulse" />
-                </div>
-                
-                <div className="mt-6">
-                  <h3 className="font-medium text-lg">{analysisProgress.message}</h3>
-                  <Progress value={analysisProgress.percent} className="h-2 mt-3" />
-                  <p className="mt-2 text-muted-foreground">{analysisProgress.percent}% завершено</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Analysis loading overlay using our new AnalysisProgress component */}
+          <AnalysisProgress
+            loading={analysisProgress.loading}
+            message={analysisProgress.message}
+            percent={analysisProgress.percent}
+          />
         </DialogContent>
       </Dialog>
 
-      {/* Results dialog - keep the existing design but adjust styling to better match example */}
+      {/* Results dialog using our new AnalysisResult component */}
       <Dialog open={analysisResult !== null} onOpenChange={(open) => !open && setAnalysisResult(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -757,107 +427,13 @@ const FatigueAnalysisPage = () => {
           </DialogHeader>
           
           {analysisResult && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                <span className="text-muted-foreground">ID анализа:</span>
-                <strong>#{analysisResult.analysis_id || 'неизвестно'}</strong>
-              </div>
-              
-              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                <span className="text-muted-foreground">Уровень усталости:</span>
-                <strong className={`
-                  ${analysisResult.fatigue_level?.toLowerCase() === 'high' ? 'text-rose-500' : 
-                    analysisResult.fatigue_level?.toLowerCase() === 'medium' ? 'text-amber-500' : 
-                    'text-emerald-500'}
-                `}>
-                  {analysisResult.fatigue_level === 'High' ? 'Высокий' : 
-                   analysisResult.fatigue_level === 'Medium' ? 'Средний' : 
-                   analysisResult.fatigue_level === 'Low' ? 'Низкий' : 
-                   'Нет данных'}
-                </strong>
-              </div>
-
-              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                <span className="text-muted-foreground">Точность модели:</span>
-                <div className="relative w-20 h-20">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="36"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="none"
-                      className="text-muted/20"
-                    />
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="36"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="none"
-                      strokeDasharray={226.1946}
-                      strokeDashoffset={226.1946 - (226.1946 * (analysisResult.neural_network_score || 0))}
-                      className={`
-                        ${(analysisResult.neural_network_score || 0) > 0.7 ? 'text-rose-500' : 
-                          (analysisResult.neural_network_score || 0) > 0.4 ? 'text-amber-500' : 
-                          'text-emerald-500'} 
-                        transition-all duration-1000
-                      `}
-                    />
-                  </svg>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                    <span className="text-lg font-bold">
-                      {Math.round((analysisResult.neural_network_score || 0) * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                <span className="text-muted-foreground">Оценка системы:</span>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <div 
-                      key={star}
-                      className="relative cursor-pointer transition-transform hover:scale-110"
-                      onMouseEnter={() => setHoveredStar(star)}
-                      onMouseLeave={() => setHoveredStar(0)}
-                      onClick={() => setFeedbackScore(star)}
-                    >
-                      <Star
-                        className={`h-6 w-6 ${
-                          star <= (hoveredStar || feedbackScore) 
-                            ? 'text-amber-400 fill-amber-400' 
-                            : 'text-gray-300'
-                        }`}
-                      />
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap">
-                        {STAR_LABELS[star - 1]}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {analysisResult.video_path && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Запись:</h4>
-                  <video 
-                    controls 
-                    src={analysisResult.video_path}
-                    className="w-full rounded-md bg-black aspect-video"
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end mt-6">
-                <Button onClick={submitFeedback}>
-                  Отправить оценку
-                </Button>
-              </div>
-            </div>
+            <AnalysisResult
+              analysisResult={analysisResult}
+              feedbackScore={feedbackScore}
+              setFeedbackScore={setFeedbackScore}
+              onClose={() => setAnalysisResult(null)}
+              onSubmitFeedback={submitFeedback}
+            />
           )}
         </DialogContent>
       </Dialog>
