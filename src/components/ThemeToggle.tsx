@@ -9,8 +9,13 @@ export function ThemeToggle() {
   
   // Ensure the theme is properly synced with the UI
   useEffect(() => {
-    // Apply data-theme attribute to document for consistency
-    document.documentElement.setAttribute('data-theme', theme || 'light');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
   }, [theme]);
 
   // Use resolvedTheme for accurate detection of current theme
