@@ -1,6 +1,7 @@
 
 .schedule-container {
   width: 100%;
+  padding: 1rem;
 }
 
 .schedule-header {
@@ -30,15 +31,35 @@
 }
 
 .week-view {
-  display: grid;
+  display: flex;
+  overflow-x: auto;
   gap: 1rem;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.week-view::-webkit-scrollbar {
+  height: 6px;
+}
+
+.week-view::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 3px;
+}
+
+.week-view::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
 }
 
 .day-column {
-  background-color: white;
+  min-width: 280px;
+  flex: 0 0 auto;
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   padding: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .day-header {
@@ -60,7 +81,8 @@
 }
 
 .flight-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: hsl(var(--accent));
+  border-color: hsl(var(--border));
 }
 
 /* Concise view styles */
@@ -81,12 +103,14 @@
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  color: hsl(var(--foreground));
 }
 
 .flight-time {
   font-weight: 500;
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
+  color: hsl(var(--foreground));
 }
 
 .flight-number {
@@ -94,23 +118,40 @@
   color: hsl(var(--muted-foreground));
 }
 
-/* Mobile responsiveness */
 @media (max-width: 640px) {
-  .week-view {
-    grid-template-columns: 1fr;
+  .schedule-container {
+    padding: 0.5rem;
   }
-}
 
-@media (min-width: 641px) {
+  .schedule-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
   .week-view {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem 1rem 0.5rem;
+  }
+
+  .day-column {
+    min-width: 240px;
+  }
+
+  .flight-item {
+    padding: 0.5rem;
+  }
+
+  .flight-route, .flight-time, .flight-number {
+    font-size: 0.75rem;
   }
 }
 
 .calendar-dropdown {
   position: absolute;
   z-index: 50;
-  background-color: white;
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
@@ -119,26 +160,37 @@
   margin-top: 0.5rem;
 }
 
+/* Tooltip styles */
 .tooltip-wrapper {
   position: relative;
 }
 
 .tooltip-text {
-  display: none;
+  visibility: hidden;
+  position: absolute;
+  z-index: 1;
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  text-align: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-@media (max-width: 640px) {
-  .tooltip-wrapper:hover .tooltip-text {
-    display: block;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: hsl(var(--popover));
-    border: 1px solid hsl(var(--border));
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    z-index: 50;
-    white-space: nowrap;
+.tooltip-wrapper:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (min-width: 641px) {
+  .tooltip-text {
+    display: none;
   }
 }
+
