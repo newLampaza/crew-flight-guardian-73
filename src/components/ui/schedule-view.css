@@ -32,15 +32,18 @@
 
 .week-view {
   display: flex;
-  overflow-x: auto;
+  flex-direction: column;
   gap: 1rem;
-  padding-bottom: 1rem;
+  padding: 1rem 0;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 }
 
 .week-view::-webkit-scrollbar {
-  height: 6px;
+  width: 6px;
 }
 
 .week-view::-webkit-scrollbar-track {
@@ -54,8 +57,7 @@
 }
 
 .day-column {
-  min-width: 280px;
-  flex: 0 0 auto;
+  width: 100%;
   background-color: hsl(var(--card));
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
