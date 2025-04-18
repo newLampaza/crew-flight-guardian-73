@@ -18,6 +18,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MedicalDashboard from "@/pages/MedicalDashboard";
 import { ThemeProvider } from "@/components/theme-provider";
+import "../src/index.css";
 
 function App() {
   return (
