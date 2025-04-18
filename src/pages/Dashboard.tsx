@@ -1,38 +1,19 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React from 'react';
 import { useAuth } from "@/context/AuthContext";
-import { Users, PlaneTakeoff, Clock, Brain, Stethoscope, Battery, Activity, ChevronRight, AlertTriangle } from "lucide-react";
-import { Link } from "react-router-dom";
-
-const crewData = [{
-  id: 1,
-  name: "Анна Смирнова",
-  position: "Второй пилот"
-}, {
-  id: 2,
-  name: "Сергей Иванов",
-  position: "Бортинженер"
-}, {
-  id: 3,
-  name: "Елена Козлова",
-  position: "Старший бортпроводник"
-}, {
-  id: 4,
-  name: "Михаил Сидоров",
-  position: "Бортпроводник"
-}];
-
-const flightStats = {
-  weeklyFlights: 5,
-  weeklyHours: 24,
-  monthlyFlights: 18,
-  monthlyHours: 92
-};
+import AdminHome from './AdminHome';
+import MedicalHome from './MedicalHome';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { isAdmin, isMedical } = useAuth();
+
+  if (isAdmin()) {
+    return <AdminHome />;
+  }
+
+  if (isMedical()) {
+    return <MedicalHome />;
+  }
+
   return <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
     {/* Employee Profile Section */}
     <div className="mb-8">
