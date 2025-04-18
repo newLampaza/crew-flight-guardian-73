@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -22,21 +21,19 @@ import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardLayout: React.FC = () => {
   const { user, logout, isAdmin, isMedical, isPilot } = useAuth();
-  const { isMobile, setIsSidebarOpen, isSidebarOpen } = useMobile();
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Функция для отображения разных наборов меню в зависимости от роли
   const renderNavItems = () => {
-    // Базовое меню для всех пользователей
     const baseNavItems = [
       { to: "/", icon: <Home className="h-5 w-5" />, label: "Главная" },
       { to: "/settings", icon: <Settings className="h-5 w-5" />, label: "Настройки" },
     ];
 
-    // Меню для пилотов
     const pilotNavItems = [
       { to: "/fatigue-analysis", icon: <Brain className="h-5 w-5" />, label: "Анализ усталости" },
       { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
@@ -45,7 +42,6 @@ const DashboardLayout: React.FC = () => {
       { to: "/feedback", icon: <MessageSquare className="h-5 w-5" />, label: "Отзывы" },
     ];
 
-    // Меню для администраторов
     const adminNavItems = [
       { to: "/admin", icon: <Server className="h-5 w-5" />, label: "Панель администратора" },
       { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
@@ -53,7 +49,6 @@ const DashboardLayout: React.FC = () => {
       { to: "/cognitive-tests", icon: <Activity className="h-5 w-5" />, label: "Когнитивные тесты" },
     ];
 
-    // Меню для медицинских работников
     const medicalNavItems = [
       { to: "/medical", icon: <HeartPulse className="h-5 w-5" />, label: "Медицинская панель" },
       { to: "/schedule", icon: <Calendar className="h-5 w-5" />, label: "Расписание" },
@@ -90,7 +85,6 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar/Mobile Menu */}
       <div
         className={cn(
           "fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-300 ease-in-out",
@@ -150,7 +144,6 @@ const DashboardLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Main content */}
       <div
         className={cn(
           "flex flex-1 flex-col",
