@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,9 +40,18 @@ const feedbackHistory = [
   }
 ];
 
+const STAR_LABELS = [
+  'Очень плохо',
+  'Плохо',
+  'Удовлетворительно', 
+  'Хорошо', 
+  'Отлично'
+];
+
 const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [flightRating, setFlightRating] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
   const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -96,20 +104,29 @@ const FeedbackPage = () => {
                   <Label>Общая оценка полета</Label>
                   <div className="flex justify-center space-x-1 sm:space-x-2">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button
+                      <div 
                         key={star}
-                        type="button"
-                        onClick={() => setFlightRating(star)}
-                        className="focus:outline-none transition-colors duration-200"
+                        className="relative cursor-pointer transition-transform hover:scale-110 group"
+                        onMouseEnter={() => setHoveredStar(star)}
+                        onMouseLeave={() => setHoveredStar(0)}
                       >
-                        <Star
-                          className={`h-8 w-8 sm:h-10 sm:w-10 ${
-                            flightRating >= star
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300"
-                          } transition-colors duration-200 hover:fill-yellow-400 hover:text-yellow-400`}
-                        />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => setFlightRating(star)}
+                          className="focus:outline-none"
+                        >
+                          <Star
+                            className={`h-8 w-8 sm:h-10 sm:w-10 ${
+                              star <= (hoveredStar || flightRating)
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-gray-300"
+                            } transition-colors duration-200`}
+                          />
+                        </button>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap">
+                          {STAR_LABELS[star - 1]}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
