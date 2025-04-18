@@ -1,10 +1,43 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/context/AuthContext";
 import AdminHome from './AdminHome';
 import MedicalHome from './MedicalHome';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link } from 'react-router-dom';
+import {
+  PlaneTakeoff,
+  Users,
+  Clock,
+  Brain,
+  Stethoscope,
+  Battery,
+  AlertTriangle,
+  Activity,
+  ChevronRight
+} from "lucide-react";
 
 const Dashboard = () => {
-  const { isAdmin, isMedical } = useAuth();
+  const { user, isAdmin, isMedical, isPilot } = useAuth();
+  
+  // Mock data for flight stats
+  const flightStats = {
+    weeklyFlights: 4,
+    weeklyHours: 18,
+    monthlyFlights: 16,
+    monthlyHours: 72
+  };
+  
+  // Mock crew data
+  const crewData = [
+    { id: 1, name: "Иванов И.И.", position: "Капитан" },
+    { id: 2, name: "Петрова А.С.", position: "Второй пилот" },
+    { id: 3, name: "Сидоров М.В.", position: "Бортпроводник" },
+    { id: 4, name: "Кузнецов Д.А.", position: "Бортпроводник" }
+  ];
 
   if (isAdmin()) {
     return <AdminHome />;
