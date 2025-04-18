@@ -21,7 +21,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="fatigue-guard-theme">
+    <ThemeProvider defaultTheme="system" enableSystem={true} storageKey="fatigue-guard-theme">
       <BrowserRouter>
         <AuthProvider>
           <Routes>
