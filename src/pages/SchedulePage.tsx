@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -216,127 +215,29 @@ const formatDayMonth = (date: Date) => {
   return format(date, 'd MMMM', { locale: ru });
 };
 
-const FlightCard = ({ flight, viewMode = "full" }: { flight: Flight; viewMode?: "full" | "concise" }) => {
-  if (viewMode === "concise") {
-    return (
-      <div className={`flight-item concise`}>
-        <div className="flex justify-between items-center">
-          <div className="flight-number">{flight.flightNumber}</div>
-          <Badge
-            variant={
-              flight.status === "active" ? "default" :
-              flight.status === "upcoming" ? "secondary" :
-              "outline"
-            }
-            className="text-xs"
-          >
-            {flight.status === "active" ? "В полёте" :
-             flight.status === "upcoming" ? "Планируется" :
-             "Выполнен"}
-          </Badge>
-        </div>
-        <div className="flight-time mt-1">{formatDateShort(flight.departure.time)} → {formatDateShort(flight.arrival.time)}</div>
-        <div className="flight-route text-muted-foreground">
-          {flight.departure.airport} → {flight.arrival.airport}
-        </div>
-      </div>
-    );
-  }
-  
+const FlightCard = ({ flight }: { flight: Flight }) => {
   return (
-    <Card className="mb-4 hover:shadow-md transition-all duration-200">
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <div className="mr-4 p-2 bg-primary/10 rounded-full">
-              {flight.status === "completed" ? (
-                <PlaneLanding className="h-6 w-6 text-primary" />
-              ) : (
-                <PlaneTakeoff className="h-6 w-6 text-primary" />
-              )}
-            </div>
-            <div>
-              <div className="tooltip-wrapper">
-                <h3 className="font-bold text-lg">{flight.flightNumber}</h3>
-                <span className="tooltip-text">{flight.flightNumber}</span>
-              </div>
-              <div className="tooltip-wrapper">
-                <p className="text-sm text-muted-foreground">{flight.aircraft}</p>
-                <span className="tooltip-text">{flight.aircraft}</span>
-              </div>
-            </div>
-          </div>
-          <Badge
-            variant={
-              flight.status === "active" ? "default" :
-              flight.status === "upcoming" ? "secondary" :
-              flight.status === "completed" ? "outline" : "outline"
-            }
-          >
-            {flight.status === "active" ? "В полёте" :
-             flight.status === "upcoming" ? "Предстоящий" :
-             flight.status === "completed" ? "Выполнен" : flight.status}
-          </Badge>
-        </div>
-        
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-          <div>
-            <div className="tooltip-wrapper">
-              <div className="font-medium flex items-center text-sm sm:text-base">
-                <Clock className="h-4 w-4 mr-1" />
-                {formatDate(flight.departure.time)}
-              </div>
-              <span className="tooltip-text">{formatDate(flight.departure.time)}</span>
-            </div>
-            <div className="tooltip-wrapper">
-              <div className="flex items-center mt-1 text-xs sm:text-sm">
-                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span className="truncate">{flight.departure.airport}</span>
-              </div>
-              <span className="tooltip-text">{flight.departure.airport}</span>
-            </div>
-            <div className="tooltip-wrapper">
-              <div className="text-xs text-muted-foreground mt-1">
-                Терминал {flight.departure.terminal}
-              </div>
-              <span className="tooltip-text">Терминал {flight.departure.terminal}</span>
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-center px-2 sm:px-4">
-            <div className="text-xs font-medium">{flight.duration}</div>
-            <div className="w-16 sm:w-24 h-[1px] bg-border my-2 relative">
-              <div className="absolute top-1/2 left-0 w-2 h-2 -mt-1 rounded-full bg-primary"></div>
-              <div className="absolute top-1/2 right-0 w-2 h-2 -mt-1 rounded-full bg-primary"></div>
-            </div>
-            <div className="text-xs text-muted-foreground">Прямой рейс</div>
-          </div>
-          
-          <div className="text-right">
-            <div className="tooltip-wrapper">
-              <div className="font-medium flex items-center justify-end text-sm sm:text-base">
-                <Clock className="h-4 w-4 mr-1" />
-                {formatDate(flight.arrival.time)}
-              </div>
-              <span className="tooltip-text">{formatDate(flight.arrival.time)}</span>
-            </div>
-            <div className="tooltip-wrapper">
-              <div className="flex items-center justify-end mt-1 text-xs sm:text-sm">
-                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                <span className="truncate">{flight.arrival.airport}</span>
-              </div>
-              <span className="tooltip-text">{flight.arrival.airport}</span>
-            </div>
-            <div className="tooltip-wrapper">
-              <div className="text-xs text-muted-foreground mt-1">
-                Терминал {flight.arrival.terminal}
-              </div>
-              <span className="tooltip-text">Терминал {flight.arrival.terminal}</span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className={`flight-item concise`}>
+      <div className="flex justify-between items-center">
+        <div className="flight-number">{flight.flightNumber}</div>
+        <Badge
+          variant={
+            flight.status === "active" ? "default" :
+            flight.status === "upcoming" ? "secondary" :
+            "outline"
+          }
+          className="text-xs"
+        >
+          {flight.status === "active" ? "В полёте" :
+           flight.status === "upcoming" ? "Планируется" :
+           "Выполнен"}
+        </Badge>
+      </div>
+      <div className="flight-time mt-1">{formatDateShort(flight.departure.time)} → {formatDateShort(flight.arrival.time)}</div>
+      <div className="flight-route text-muted-foreground">
+        {flight.departure.airport} → {flight.arrival.airport}
+      </div>
+    </div>
   );
 };
 
@@ -361,7 +262,6 @@ const groupFlightsByDay = (flights: Flight[], startDate: Date, endDate: Date) =>
 
 const SchedulePage = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<"full" | "concise">("full");
   const [showCalendar, setShowCalendar] = useState(false);
   
   // Calculate week start and end dates
@@ -388,40 +288,6 @@ const SchedulePage = () => {
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Расписание полетов</h1>
         
         <div className="flex items-center gap-2">
-          <div className="view-toggle">
-            <Button 
-              variant={viewMode === "full" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setViewMode("full")}
-              className="hidden sm:flex"
-            >
-              <LayoutList className="h-4 w-4 mr-1" />
-              Полный
-            </Button>
-            <Button 
-              variant={viewMode === "concise" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setViewMode("concise")}
-              className="hidden sm:flex"
-            >
-              <List className="h-4 w-4 mr-1" />
-              Краткий
-            </Button>
-            
-            {/* Mobile toggle */}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setViewMode(viewMode === "full" ? "concise" : "full")}
-              className="sm:hidden"
-            >
-              {viewMode === "full" ? 
-                <LayoutList className="h-4 w-4" /> : 
-                <List className="h-4 w-4" />
-              }
-            </Button>
-          </div>
-          
           <div className="month-navigation">
             <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
@@ -470,11 +336,7 @@ const SchedulePage = () => {
                 {day.flights.length > 0 ? (
                   <div className="space-y-2">
                     {day.flights.map((flight) => (
-                      viewMode === "full" ? (
-                        <FlightCard key={flight.id} flight={flight} />
-                      ) : (
-                        <FlightCard key={flight.id} flight={flight} viewMode="concise" />
-                      )
+                      <FlightCard key={flight.id} flight={flight} />
                     ))}
                   </div>
                 ) : (
@@ -499,11 +361,7 @@ const SchedulePage = () => {
                 {day.flights.length > 0 ? (
                   <div className="space-y-2">
                     {day.flights.map((flight) => (
-                      viewMode === "full" ? (
-                        <FlightCard key={flight.id} flight={flight} />
-                      ) : (
-                        <FlightCard key={flight.id} flight={flight} viewMode="concise" />
-                      )
+                      <FlightCard key={flight.id} flight={flight} />
                     ))}
                   </div>
                 ) : (
