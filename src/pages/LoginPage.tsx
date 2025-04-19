@@ -40,7 +40,7 @@ const LoginPage = () => {
       return;
     }
     
-    const success = await login(selectedRole, password);
+    const success = await login(username, password);
     if (success) {
       // Направляем на соответствующую страницу в зависимости от роли
       if (selectedRole === "admin") {
@@ -138,7 +138,7 @@ const LoginPage = () => {
           </form>
           
           <div className="p-4 text-center text-sm text-muted-foreground">
-            <p>Тестовые данные: пользователь "{selectedRole}", пароль "password"</p>
+            <p>Тестовые данные: пользователь "{selectedRole}", пароль "pilot123"</p>
           </div>
         </Card>
       </div>

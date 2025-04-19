@@ -49,6 +49,10 @@ cp .env.example .env
 
 1. Install Node.js dependencies:
 ```bash
+npm install date-fns@^3.0.0
+npm install --legacy-peer-deps
+npm install --force
+npm outdated
 npm install
 ```
 

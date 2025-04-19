@@ -8,7 +8,7 @@ from threading import Thread
 
 def run_frontend():
     try:
-        subprocess.run(["npm", "run", "dev"], check=True)
+        subprocess.run([r"C:\Program Files\nodejs\npm.cmd", "run", "dev"], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Frontend error: {e}")
         sys.exit(1)
@@ -16,7 +16,7 @@ def run_frontend():
 def run_backend():
     try:
         from routes import app
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
     except Exception as e:
         print(f"Backend error: {e}")
         sys.exit(1)

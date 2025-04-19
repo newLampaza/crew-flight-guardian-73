@@ -130,6 +130,7 @@ def login():
                            "description": "User not found"}, 404)
 
         if not check_password_hash(user['password'], auth['password']):
+            print(user['password'], auth['password'])
             raise AuthError({"code": "invalid_credentials",
                            "description": "Invalid password"}, 401)
 
@@ -922,4 +923,316 @@ def get_flight_eligibility(current_user):
             WHERE employee_id = ?
             ORDER BY test_date DESC
             LIMIT 3
-        ''
+        ''', (current_user['employee_id'],)).fetchall()
+
+        test_status = 'failed'
+        details = 'No cognitive tests available'
+        latest_date = None
+
+        if cognitive_tests:
+            latest_date = cognitive_tests[0]['test_date']
+
+        if len(cognitive_tests) >= 3:
+            total = sum(t['score'] for t in cognitive_tests)
+            average = total / 3
+            test_status = 'passed' if average >= 75 else 'failed'
+            details = f"Average of last 3 tests: {average:.1f}%"
+        else:
+            details = f"Requires 3 tests (current: {len(cognitive_tests)})"
+
+        eligibility_data.append({
+            'id': 2,
+            'name': 'Cognitive Assessment',
+            'status': test_status,
+            'last_check': latest_date,
+            'details': details,
+            'required': True
+        })
+
+        # 3. Анализ усталости
+        fatigue = conn.execute('''
+            SELECT analysis_date, neural_network_score
+            FROM FatigueAnalysis
+            WHERE employee_id = ?
+            ORDER BY analysis_date DESC
+            LIMIT 1
+        ''', (current_user['employee_id'],)).fetchone()
+
+        fatigue_status = 'pending'
+        if fatigue:
+            fatigue_status = 'passed' if fatigue['neural_network_score'] < 0.7 else 'failed'
+
+        eligibility_data.append({
+            'id': 3,
+            'name': 'Fatigue Level',
+            'status': fatigue_status,
+            'last_check': fatigue['analysis_date'] if fatigue else None,
+            'details': f"Last reading: {fatigue['neural_network_score']*100:.1f}%" if fatigue else 'No fatigue data',
+            'required': True
+        })
+
+        return jsonify(eligibility_data)
+
+    except Exception as e:
+        app.logger.error(f"Error in flight eligibility: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/profile', methods=['GET'])
+@token_required
+def get_profile(current_user):
+    conn = get_db_connection()
+    try:
+        # Основные данные профиля
+        profile = conn.execute('''
+            SELECT 
+                e.employee_id,
+                e.name,
+                e.role,
+                e.contact_info,
+                e.employment_date,
+                e.image_url,
+                COUNT(f.flight_id) as total_flights,
+                SUM(f.duration) as total_hours
+            FROM Employees e
+            LEFT JOIN CrewMembers cm ON e.employee_id = cm.employee_id
+            LEFT JOIN Flights f ON cm.crew_id = f.crew_id 
+                AND f.arrival_time < CURRENT_TIMESTAMP
+            WHERE e.employee_id = ?
+            GROUP BY e.employee_id
+        ''', (current_user['employee_id'],)).fetchone()
+
+        # Статистика за текущую неделю (только завершенные рейсы)
+        weekly_stats = conn.execute('''
+            SELECT 
+                COUNT(f.flight_id) as weekly_completed_flights,
+                SUM(f.duration) as weekly_completed_hours
+            FROM Flights f
+            JOIN CrewMembers cm ON f.crew_id = cm.crew_id
+            WHERE cm.employee_id = ?
+              AND DATE(f.departure_time) >= DATE('now', 'weekday 0', '-6 days')
+              AND f.arrival_time < CURRENT_TIMESTAMP
+        ''', (current_user['employee_id'],)).fetchone()
+
+        result = dict(profile)
+        result.update({
+            'weekly_completed_flights': weekly_stats['weekly_completed_flights'] or 0,
+            'weekly_completed_hours': weekly_stats['weekly_completed_hours'] or 0
+        })
+
+        return jsonify(result)
+
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/cognitive-tests', methods=['GET'])
+@token_required
+def get_cognitive_tests(current_user):
+    """Получение списка когнитивных тестов пользователя"""
+    conn = get_db_connection()
+    try:
+        tests = conn.execute('''
+            SELECT 
+                test_id,
+                test_date,
+                test_type,
+                score,
+                duration,
+                details
+            FROM CognitiveTests
+            WHERE employee_id = ?
+            ORDER BY test_date DESC
+        ''', (current_user['employee_id'],)).fetchall()
+
+        if not tests:
+            return jsonify({"message": "No tests found"}), 404
+
+        return jsonify([dict(test) for test in tests])
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": "Database operation failed"}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/cognitive-tests/<int:test_id>/results', methods=['GET'])
+@token_required
+def get_test_details(current_user, test_id):
+    """Получение деталей теста и ошибок"""
+    conn = get_db_connection()
+    try:
+        # Проверка принадлежности теста пользователю
+        test = conn.execute('''
+            SELECT * FROM CognitiveTests
+            WHERE test_id = ? 
+            AND employee_id = ?
+        ''', (test_id, current_user['employee_id'])).fetchone()
+
+        if not test:
+            return jsonify({"error": "Test not found"}), 404
+
+        # Получение ошибок
+        mistakes = conn.execute('''
+            SELECT 
+                question,
+                user_answer,
+                correct_answer
+            FROM TestMistakes
+            WHERE test_id = ?
+        ''', (test_id,)).fetchall()
+
+        response_data = {
+            "test": dict(test),
+            "mistakes": [dict(mistake) for mistake in mistakes],
+            "analysis": {
+                "total_questions": len(mistakes) + test['score']/100*(len(mistakes)/(1-test['score']/100)) if test['score'] < 100 else len(mistakes),
+                "correct_answers": round(test['score']/100 * (len(mistakes)/(1-test['score']/100))) if test['score'] < 100 else "N/A"
+            }
+        }
+
+        return jsonify(response_data)
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": "Database operation failed"}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+    finally:
+        conn.close()
+
+
+
+
+@app.route('/api/feedback', methods=['GET', 'POST'])
+@token_required
+def handle_feedback(current_user):
+    if request.method == 'GET':
+        try:
+            conn = get_db_connection()
+            feedbacks = conn.execute('''
+                SELECT 
+                    f.feedback_id,
+                    f.feedback_text,
+                    f.feedback_date,
+                    fl.from_code,
+                    fl.to_code,
+                    fl.departure_time,
+                    fl.arrival_time
+                FROM Feedback f
+                JOIN Flights fl ON f.flight_id = fl.flight_id
+                WHERE f.employee_id = ?
+                ORDER BY f.feedback_date DESC
+            ''', (current_user['employee_id'],)).fetchall()
+            
+            return jsonify([dict(fb) for fb in feedbacks])
+        
+        except sqlite3.Error as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        # Обработка оценки анализа усталости
+        if 'analysis_id' in data and 'score' in data:
+            try:
+                if not 1 <= data['score'] <= 5:
+                    return jsonify({'error': 'Score must be between 1 and 5'}), 400
+
+                conn = get_db_connection()
+                result = conn.execute('''
+                    UPDATE FatigueAnalysis 
+                    SET feedback_score = ?
+                    WHERE analysis_id = ? 
+                      AND employee_id = ?
+                    RETURNING *
+                ''', (
+                    data['score'],
+                    data['analysis_id'],
+                    current_user['employee_id']
+                )).fetchone()
+                
+                if not result:
+                    return jsonify({'error': 'Analysis not found'}), 404
+                
+                conn.commit()
+                return jsonify({'status': 'success'})
+
+            except sqlite3.Error as e:
+                return jsonify({'error': str(e)}), 500
+            finally:
+                conn.close()
+
+        # Обработка отзыва о рейсе
+        else:
+            required_fields = ['flight_id', 'feedback_text']
+            if not all(field in data for field in required_fields):
+                return jsonify({'error': f'Missing fields: {required_fields}'}), 400
+
+            try:
+                conn = get_db_connection()
+                
+                # Проверка существования и завершенности рейса
+                flight = conn.execute('''
+                    SELECT arrival_time 
+                    FROM Flights 
+                    WHERE flight_id = ?
+                ''', (data['flight_id'],)).fetchone()
+
+                if not flight:
+                    return jsonify({'error': 'Flight not found'}), 404
+                
+                if datetime.fromisoformat(flight['arrival_time']) > datetime.now():
+                    return jsonify({'error': 'Flight not completed yet'}), 400
+
+                # Проверка существующего отзыва
+                existing = conn.execute('''
+                    SELECT 1 FROM Feedback 
+                    WHERE employee_id = ? 
+                      AND flight_id = ?
+                ''', (current_user['employee_id'], data['flight_id'])).fetchone()
+
+                if existing:
+                    return jsonify({'error': 'Feedback already exists'}), 409
+
+                # Создание нового отзыва
+                conn.execute('''
+                    INSERT INTO Feedback (
+                        employee_id,
+                        flight_id,
+                        feedback_text,
+                        feedback_date
+                    ) VALUES (?, ?, ?, ?)
+                ''', (
+                    current_user['employee_id'],
+                    data['flight_id'],
+                    data['feedback_text'].strip(),
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+                return jsonify({'message': 'Feedback submitted'}), 201
+
+            except sqlite3.Error as e:
+                return jsonify({'error': str(e)}), 500
+            finally:
+                conn.close()
+
+# Serve React app
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path and os.path.exists(os.path.join('site', 'dist', path)):
+        return send_from_directory('site/dist', path)
+    return send_from_directory('site/dist', 'index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+

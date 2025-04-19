@@ -1,52 +1,72 @@
+
 import sqlite3
 import os
 
-# Путь к базе данных
-db_path = os.path.join('database', 'database.db')
+# Database path setup
+db_path = os.path.join('database.db')
 
-# Подключение к базе данных
+# Connect to database
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
+# Create tables with proper schemas
 
+# Users table with enhanced authentication fields
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER UNIQUE,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT CHECK(role IN ('pilot', 'admin', 'medical')) NOT NULL,
+    last_login TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
+)
+''')
 
-# Создание таблицы "Сотрудники"
+# Employees table with extended fields
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Employees (
     employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     role TEXT NOT NULL,
+    position TEXT,
     contact_info TEXT,
     employment_date TEXT,
     image_url TEXT,
-    status TEXT DEFAULT 'Активный'
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'on_leave'))
 )
 ''')
 
-# Создание таблицы "Экипажи"
+# Crews table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Crews (
     crew_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    crew_name TEXT NOT NULL
+    crew_name TEXT NOT NULL,
+    status TEXT DEFAULT 'active'
 )
 ''')
 
-# Создание таблицы "Составы экипажей"
+# Crew Members relationship table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS CrewMembers (
     crew_id INTEGER,
     employee_id INTEGER,
+    role TEXT NOT NULL,
+    join_date TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (crew_id) REFERENCES Crews (crew_id),
     FOREIGN KEY (employee_id) REFERENCES Employees (employee_id),
     PRIMARY KEY (crew_id, employee_id)
 )
 ''')
 
-# Создание таблицы "Полеты"
+# Flights table with extended tracking
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Flights (
     flight_id INTEGER PRIMARY KEY AUTOINCREMENT,
     crew_id INTEGER,
+    flight_number TEXT,
     departure_time TEXT NOT NULL,
     arrival_time TEXT NOT NULL,
     duration INTEGER,
@@ -56,64 +76,30 @@ CREATE TABLE IF NOT EXISTS Flights (
     to_city TEXT NOT NULL,
     aircraft TEXT NOT NULL,
     conditions TEXT,
+    status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+    video_path TEXT,
     FOREIGN KEY (crew_id) REFERENCES Crews (crew_id)
 )
 ''')
 
-# Создание таблицы "Анализ усталости"
+# Fatigue Analysis table with detailed metrics
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS FatigueAnalysis (
     analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id INTEGER,
     flight_id INTEGER,
-    fatigue_level TEXT,
-    analysis_date TEXT,
+    fatigue_level TEXT CHECK(fatigue_level IN ('low', 'medium', 'high')),
     neural_network_score REAL,
     feedback_score REAL,
+    analysis_date TEXT,
+    video_path TEXT,
+    notes TEXT,
     FOREIGN KEY (employee_id) REFERENCES Employees (employee_id),
     FOREIGN KEY (flight_id) REFERENCES Flights (flight_id)
 )
 ''')
 
-# Создание таблицы "Пользователи"
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS Users (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER UNIQUE,
-    username TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
-)
-''')
-
-# Создание таблицы "Обучающие материалы"
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS TrainingMaterials (
-    material_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content TEXT,
-    category TEXT
-)
-''')
-
-
-# Создание таблицы "Отзывы"
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS Feedback (
-    feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER,
-    flight_id INTEGER,
-    feedback_text TEXT,
-    feedback_date TEXT,
-    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id),
-    FOREIGN KEY (flight_id) REFERENCES Flights (flight_id)
-)
-''')
-
-
-# Создание таблицы "Когнитивные тесты"
-
-
+# Medical Checks table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS MedicalChecks (
     check_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,6 +113,7 @@ CREATE TABLE IF NOT EXISTS MedicalChecks (
 )
 ''')
 
+# Cognitive Tests table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS CognitiveTests (
     test_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,8 +127,7 @@ CREATE TABLE IF NOT EXISTS CognitiveTests (
 )
 ''')
 
-
-# Таблица ошибок тестов
+# Test Mistakes tracking
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS TestMistakes (
     mistake_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,21 +139,33 @@ CREATE TABLE IF NOT EXISTS TestMistakes (
 )
 ''')
 
-
+# Test Sessions for managing ongoing tests
 cursor.execute('''
-    CREATE TRIGGER IF NOT EXISTS CalculateFlightDuration 
-    AFTER INSERT ON Flights
-    BEGIN
-        UPDATE Flights 
-        SET duration = CAST(
-            (strftime('%s', arrival_time) - strftime('%s', departure_time)) / 60 
-            AS INTEGER)
-        WHERE flight_id = NEW.flight_id;
-    END;
-    ''')
+CREATE TABLE IF NOT EXISTS TestSessions (
+    session_id TEXT PRIMARY KEY,
+    employee_id INTEGER NOT NULL,
+    test_type TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    questions TEXT NOT NULL,
+    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
+)
+''')
 
-# Сохраняем изменения и закрываем соединение
+# Create trigger for flight duration calculation
+cursor.execute('''
+CREATE TRIGGER IF NOT EXISTS CalculateFlightDuration 
+AFTER INSERT ON Flights
+BEGIN
+    UPDATE Flights 
+    SET duration = CAST(
+        (strftime('%s', arrival_time) - strftime('%s', departure_time)) / 60 
+        AS INTEGER)
+    WHERE flight_id = NEW.flight_id;
+END;
+''')
+
+# Save changes and close connection
 conn.commit()
 conn.close()
 
-print("База данных успешно создана!")
+print("Database schema successfully initialized!")
