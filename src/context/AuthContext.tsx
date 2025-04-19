@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
+import axios from "axios";
 
 export type UserRole = "pilot" | "admin" | "medical";
 
@@ -22,91 +23,147 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isMedical: () => boolean;
   isPilot: () => boolean;
+  refreshToken: () => Promise<void>;
 }
 
-// Добавляем тестовых пользователей для разных ролей
-const SAMPLE_USERS: Record<string, User> = {
-  pilot: {
-    id: "1",
-    name: "Иван Петров",
-    role: "pilot",
-    position: "Капитан",
-    avatarUrl: "/pilot-avatar.jpg"
-  },
-  admin: {
-    id: "2",
-    name: "Алексей Сидоров",
-    role: "admin",
-    position: "Системный администратор",
-    avatarUrl: "/admin-avatar.jpg"
-  },
-  medical: {
-    id: "3",
-    name: "Елена Иванова",
-    role: "medical",
-    position: "Медицинский специалист",
-    avatarUrl: "/medical-avatar.jpg"
-  }
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add request interceptor for JWT
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('fatigue-guard-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Redirect to login on authentication error
+      localStorage.removeItem('fatigue-guard-token');
+      localStorage.removeItem('fatigue-guard-user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("fatigue-guard-user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Function to refresh the token
+  const refreshToken = async () => {
+    try {
+      const token = localStorage.getItem('fatigue-guard-token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await api.post('/refresh-token');
+      const newToken = response.data.token;
+      localStorage.setItem('fatigue-guard-token', newToken);
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      logout();
     }
-    setLoading(false);
+  };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem('fatigue-guard-user');
+        const token = localStorage.getItem('fatigue-guard-token');
+        
+        if (storedUser && token) {
+          setUser(JSON.parse(storedUser));
+          
+          // Validate token on startup
+          try {
+            await api.get('/validate-token');
+          } catch (error) {
+            console.error('Token validation failed:', error);
+            await logout();
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        await logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     setLoading(true);
-    
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Проверяем, есть ли пользователь с таким именем
-        const validUsernames = Object.keys(SAMPLE_USERS);
-        if (validUsernames.includes(username) && password === "password") {
-          const user = SAMPLE_USERS[username];
-          setUser(user);
-          localStorage.setItem("fatigue-guard-user", JSON.stringify(user));
-          toast({
-            title: "Вход выполнен успешно",
-            description: `Добро пожаловать, ${user.name}`,
-          });
-          setLoading(false);
-          resolve(true);
-        } else {
-          toast({
-            title: "Ошибка входа",
-            description: "Неверное имя пользователя или пароль",
-            variant: "destructive",
-          });
-          setLoading(false);
-          resolve(false);
-        }
-      }, 1000);
-    });
+    try {
+      const response = await api.post('/login', { username, password });
+      const { token, user } = response.data;
+
+      if (token && user) {
+        localStorage.setItem('fatigue-guard-token', token);
+        localStorage.setItem('fatigue-guard-user', JSON.stringify(user));
+        setUser(user);
+
+        toast({
+          title: "Вход выполнен успешно",
+          description: `Добро пожаловать, ${user.name}`,
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Ошибка при входе в систему';
+      toast({
+        title: "Ошибка входа",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("fatigue-guard-user");
-    navigate("/login");
-    toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы",
-    });
+  const logout = async () => {
+    try {
+      await api.post('/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('fatigue-guard-token');
+      localStorage.removeItem('fatigue-guard-user');
+      navigate('/login');
+      toast({
+        title: "Выход из системы",
+        description: "Вы успешно вышли из системы",
+      });
+    }
   };
 
-  // Вспомогательные функции для проверки роли
+  // Helper functions for role checks
   const isAdmin = () => user?.role === "admin";
   const isMedical = () => user?.role === "medical";
   const isPilot = () => user?.role === "pilot";
@@ -121,7 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isAdmin,
         isMedical,
-        isPilot
+        isPilot,
+        refreshToken
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-
 from logging.handlers import RotatingFileHandler
 import traceback
 import cv2
@@ -9,12 +8,13 @@ import os
 from datetime import datetime, time, timedelta
 import jwt
 from functools import wraps
-from neural_network.predict import analyze_source
 import hashlib
 import uuid
 import json
 import shutil
 import logging
+from werkzeug.security import generate_password_hash, check_password_hash
+from neural_network.predict import analyze_source
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -31,8 +31,10 @@ logging.basicConfig(
 
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, expose_headers='Authorization')
+CORS(app, supports_credentials=True, expose_headers=['Authorization'])
 app.config['SECRET_KEY'] = os.urandom(24).hex()
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
 DATABASE = os.path.join('database', 'database.db')
 VIDEO_DIR = os.path.join('neural_network', 'data', 'video')
@@ -47,16 +49,32 @@ def get_db_connection():
     return conn
 
 
-# Authentication middleware
+class AuthError(Exception):
+    def __init__(self, error, status_code):
+        self.error = error
+        self.status_code = status_code
+
+@app.errorhandler(AuthError)
+def handle_auth_error(ex):
+    response = jsonify(ex.error)
+    response.status_code = ex.status_code
+    return response
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
         if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1]
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(" ")[1]
+            except IndexError:
+                raise AuthError({"code": "invalid_header",
+                               "description": "Invalid header. Use 'Bearer {token}'"}, 401)
         
         if not token:
-            return jsonify({'message': 'Token missing!'}), 401
+            raise AuthError({"code": "invalid_header",
+                           "description": "Token missing"}, 401)
         
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
@@ -68,14 +86,122 @@ def token_required(f):
             conn.close()
             
             if not current_user:
-                raise ValueError('User not found')
+                raise AuthError({"code": "invalid_user",
+                               "description": "User not found"}, 401)
                 
-        except Exception as e:
-            return jsonify({'message': str(e)}), 401
+        except jwt.ExpiredSignatureError:
+            raise AuthError({"code": "token_expired",
+                           "description": "Token has expired"}, 401)
+        except jwt.InvalidTokenError:
+            raise AuthError({"code": "invalid_token",
+                           "description": "Invalid token"}, 401)
             
         return f(current_user, *args, **kwargs)
     return decorated
 
+def create_tokens(user):
+    access_token = jwt.encode({
+        'username': user['username'],
+        'exp': datetime.utcnow() + app.config['JWT_ACCESS_TOKEN_EXPIRES']
+    }, app.config['SECRET_KEY'])
+    
+    refresh_token = jwt.encode({
+        'username': user['username'],
+        'exp': datetime.utcnow() + app.config['JWT_REFRESH_TOKEN_EXPIRES']
+    }, app.config['SECRET_KEY'])
+    
+    return access_token, refresh_token
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        auth = request.get_json()
+        if not auth or not auth.get('username') or not auth.get('password'):
+            raise AuthError({"code": "invalid_credentials",
+                           "description": "Missing username or password"}, 400)
+
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM Users WHERE username = ?', 
+                          (auth['username'],)).fetchone()
+        conn.close()
+
+        if not user:
+            raise AuthError({"code": "invalid_credentials",
+                           "description": "User not found"}, 404)
+
+        if not check_password_hash(user['password'], auth['password']):
+            raise AuthError({"code": "invalid_credentials",
+                           "description": "Invalid password"}, 401)
+
+        access_token, refresh_token = create_tokens(user)
+
+        return jsonify({
+            'token': access_token,
+            'refresh_token': refresh_token,
+            'user': dict(user)
+        })
+
+    except AuthError as e:
+        return jsonify(e.error), e.status_code
+    except Exception as e:
+        app.logger.error(f"Login error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/refresh-token', methods=['POST'])
+def refresh_token():
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            raise AuthError({"code": "invalid_header",
+                           "description": "No refresh token provided"}, 401)
+        
+        try:
+            refresh_token = auth_header.split(" ")[1]
+        except IndexError:
+            raise AuthError({"code": "invalid_header",
+                           "description": "Invalid header format"}, 401)
+
+        try:
+            data = jwt.decode(refresh_token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            conn = get_db_connection()
+            user = conn.execute('SELECT * FROM Users WHERE username = ?', 
+                              (data['username'],)).fetchone()
+            conn.close()
+
+            if not user:
+                raise AuthError({"code": "invalid_token",
+                               "description": "User not found"}, 401)
+
+            new_access_token, new_refresh_token = create_tokens(user)
+
+            return jsonify({
+                'token': new_access_token,
+                'refresh_token': new_refresh_token
+            })
+
+        except jwt.ExpiredSignatureError:
+            raise AuthError({"code": "token_expired",
+                           "description": "Refresh token has expired"}, 401)
+        except jwt.InvalidTokenError:
+            raise AuthError({"code": "invalid_token",
+                           "description": "Invalid refresh token"}, 401)
+
+    except AuthError as e:
+        return jsonify(e.error), e.status_code
+    except Exception as e:
+        app.logger.error(f"Token refresh error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/validate-token', methods=['GET'])
+@token_required
+def validate_token(current_user):
+    return jsonify({'valid': True})
+
+@app.route('/api/logout', methods=['POST'])
+@token_required
+def logout(current_user):
+    # В будущем здесь можно добавить инвалидацию токена
+    return jsonify({'message': 'Successfully logged out'})
 
 # Генерация тестовых вопросов
 def generate_test_questions(test_type):
@@ -690,38 +816,6 @@ def get_test_results(current_user, test_id):
     finally:
         conn.close()
 
-# API Endpoints
-@app.route('/api/login', methods=['POST'])
-def login():
-    auth = request.get_json()
-    if not auth or not auth.get('username') or not auth.get('password'):
-        return jsonify({'message': 'Invalid credentials'}), 400
-
-    conn = get_db_connection()
-    user = conn.execute('SELECT * FROM Users WHERE username = ?', 
-                      (auth['username'],)).fetchone()
-    conn.close()
-
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
-
-    # Хеширование введённого пароля
-    input_hash = hashlib.sha256(auth['password'].encode()).hexdigest()
-    
-    if user['password'] != input_hash:
-        return jsonify({'message': 'Invalid password'}), 401
-
-    # Генерация токена
-    token = jwt.encode({
-        'username': user['username'],
-        'exp': datetime.utcnow() + timedelta(hours=24)
-    }, app.config['SECRET_KEY'])
-
-    return jsonify({
-        'token': token,
-        'user': dict(user)
-    })
-
 @app.route('/api/crew', methods=['GET'])
 @token_required
 def get_crew(current_user):
@@ -828,316 +922,4 @@ def get_flight_eligibility(current_user):
             WHERE employee_id = ?
             ORDER BY test_date DESC
             LIMIT 3
-        ''', (current_user['employee_id'],)).fetchall()
-
-        test_status = 'failed'
-        details = 'No cognitive tests available'
-        latest_date = None
-
-        if cognitive_tests:
-            latest_date = cognitive_tests[0]['test_date']
-
-        if len(cognitive_tests) >= 3:
-            total = sum(t['score'] for t in cognitive_tests)
-            average = total / 3
-            test_status = 'passed' if average >= 75 else 'failed'
-            details = f"Average of last 3 tests: {average:.1f}%"
-        else:
-            details = f"Requires 3 tests (current: {len(cognitive_tests)})"
-
-        eligibility_data.append({
-            'id': 2,
-            'name': 'Cognitive Assessment',
-            'status': test_status,
-            'last_check': latest_date,
-            'details': details,
-            'required': True
-        })
-
-        # 3. Анализ усталости
-        fatigue = conn.execute('''
-            SELECT analysis_date, neural_network_score
-            FROM FatigueAnalysis
-            WHERE employee_id = ?
-            ORDER BY analysis_date DESC
-            LIMIT 1
-        ''', (current_user['employee_id'],)).fetchone()
-
-        fatigue_status = 'pending'
-        if fatigue:
-            fatigue_status = 'passed' if fatigue['neural_network_score'] < 0.7 else 'failed'
-
-        eligibility_data.append({
-            'id': 3,
-            'name': 'Fatigue Level',
-            'status': fatigue_status,
-            'last_check': fatigue['analysis_date'] if fatigue else None,
-            'details': f"Last reading: {fatigue['neural_network_score']*100:.1f}%" if fatigue else 'No fatigue data',
-            'required': True
-        })
-
-        return jsonify(eligibility_data)
-
-    except Exception as e:
-        app.logger.error(f"Error in flight eligibility: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
-    finally:
-        conn.close()
-
-@app.route('/api/profile', methods=['GET'])
-@token_required
-def get_profile(current_user):
-    conn = get_db_connection()
-    try:
-        # Основные данные профиля
-        profile = conn.execute('''
-            SELECT 
-                e.employee_id,
-                e.name,
-                e.role,
-                e.contact_info,
-                e.employment_date,
-                e.image_url,
-                COUNT(f.flight_id) as total_flights,
-                SUM(f.duration) as total_hours
-            FROM Employees e
-            LEFT JOIN CrewMembers cm ON e.employee_id = cm.employee_id
-            LEFT JOIN Flights f ON cm.crew_id = f.crew_id 
-                AND f.arrival_time < CURRENT_TIMESTAMP
-            WHERE e.employee_id = ?
-            GROUP BY e.employee_id
-        ''', (current_user['employee_id'],)).fetchone()
-
-        # Статистика за текущую неделю (только завершенные рейсы)
-        weekly_stats = conn.execute('''
-            SELECT 
-                COUNT(f.flight_id) as weekly_completed_flights,
-                SUM(f.duration) as weekly_completed_hours
-            FROM Flights f
-            JOIN CrewMembers cm ON f.crew_id = cm.crew_id
-            WHERE cm.employee_id = ?
-              AND DATE(f.departure_time) >= DATE('now', 'weekday 0', '-6 days')
-              AND f.arrival_time < CURRENT_TIMESTAMP
-        ''', (current_user['employee_id'],)).fetchone()
-
-        result = dict(profile)
-        result.update({
-            'weekly_completed_flights': weekly_stats['weekly_completed_flights'] or 0,
-            'weekly_completed_hours': weekly_stats['weekly_completed_hours'] or 0
-        })
-
-        return jsonify(result)
-
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
-        conn.close()
-
-@app.route('/api/cognitive-tests', methods=['GET'])
-@token_required
-def get_cognitive_tests(current_user):
-    """Получение списка когнитивных тестов пользователя"""
-    conn = get_db_connection()
-    try:
-        tests = conn.execute('''
-            SELECT 
-                test_id,
-                test_date,
-                test_type,
-                score,
-                duration,
-                details
-            FROM CognitiveTests
-            WHERE employee_id = ?
-            ORDER BY test_date DESC
-        ''', (current_user['employee_id'],)).fetchall()
-
-        if not tests:
-            return jsonify({"message": "No tests found"}), 404
-
-        return jsonify([dict(test) for test in tests])
-
-    except sqlite3.Error as e:
-        app.logger.error(f"Database error: {str(e)}")
-        return jsonify({"error": "Database operation failed"}), 500
-    except Exception as e:
-        app.logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-    finally:
-        conn.close()
-
-@app.route('/api/cognitive-tests/<int:test_id>/results', methods=['GET'])
-@token_required
-def get_test_details(current_user, test_id):
-    """Получение деталей теста и ошибок"""
-    conn = get_db_connection()
-    try:
-        # Проверка принадлежности теста пользователю
-        test = conn.execute('''
-            SELECT * FROM CognitiveTests
-            WHERE test_id = ? 
-            AND employee_id = ?
-        ''', (test_id, current_user['employee_id'])).fetchone()
-
-        if not test:
-            return jsonify({"error": "Test not found"}), 404
-
-        # Получение ошибок
-        mistakes = conn.execute('''
-            SELECT 
-                question,
-                user_answer,
-                correct_answer
-            FROM TestMistakes
-            WHERE test_id = ?
-        ''', (test_id,)).fetchall()
-
-        response_data = {
-            "test": dict(test),
-            "mistakes": [dict(mistake) for mistake in mistakes],
-            "analysis": {
-                "total_questions": len(mistakes) + test['score']/100*(len(mistakes)/(1-test['score']/100)) if test['score'] < 100 else len(mistakes),
-                "correct_answers": round(test['score']/100 * (len(mistakes)/(1-test['score']/100))) if test['score'] < 100 else "N/A"
-            }
-        }
-
-        return jsonify(response_data)
-
-    except sqlite3.Error as e:
-        app.logger.error(f"Database error: {str(e)}")
-        return jsonify({"error": "Database operation failed"}), 500
-    except Exception as e:
-        app.logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-    finally:
-        conn.close()
-
-
-
-
-@app.route('/api/feedback', methods=['GET', 'POST'])
-@token_required
-def handle_feedback(current_user):
-    if request.method == 'GET':
-        try:
-            conn = get_db_connection()
-            feedbacks = conn.execute('''
-                SELECT 
-                    f.feedback_id,
-                    f.feedback_text,
-                    f.feedback_date,
-                    fl.from_code,
-                    fl.to_code,
-                    fl.departure_time,
-                    fl.arrival_time
-                FROM Feedback f
-                JOIN Flights fl ON f.flight_id = fl.flight_id
-                WHERE f.employee_id = ?
-                ORDER BY f.feedback_date DESC
-            ''', (current_user['employee_id'],)).fetchall()
-            
-            return jsonify([dict(fb) for fb in feedbacks])
-        
-        except sqlite3.Error as e:
-            return jsonify({'error': str(e)}), 500
-        finally:
-            conn.close()
-
-    elif request.method == 'POST':
-        data = request.get_json()
-        
-        # Обработка оценки анализа усталости
-        if 'analysis_id' in data and 'score' in data:
-            try:
-                if not 1 <= data['score'] <= 5:
-                    return jsonify({'error': 'Score must be between 1 and 5'}), 400
-
-                conn = get_db_connection()
-                result = conn.execute('''
-                    UPDATE FatigueAnalysis 
-                    SET feedback_score = ?
-                    WHERE analysis_id = ? 
-                      AND employee_id = ?
-                    RETURNING *
-                ''', (
-                    data['score'],
-                    data['analysis_id'],
-                    current_user['employee_id']
-                )).fetchone()
-                
-                if not result:
-                    return jsonify({'error': 'Analysis not found'}), 404
-                
-                conn.commit()
-                return jsonify({'status': 'success'})
-
-            except sqlite3.Error as e:
-                return jsonify({'error': str(e)}), 500
-            finally:
-                conn.close()
-
-        # Обработка отзыва о рейсе
-        else:
-            required_fields = ['flight_id', 'feedback_text']
-            if not all(field in data for field in required_fields):
-                return jsonify({'error': f'Missing fields: {required_fields}'}), 400
-
-            try:
-                conn = get_db_connection()
-                
-                # Проверка существования и завершенности рейса
-                flight = conn.execute('''
-                    SELECT arrival_time 
-                    FROM Flights 
-                    WHERE flight_id = ?
-                ''', (data['flight_id'],)).fetchone()
-
-                if not flight:
-                    return jsonify({'error': 'Flight not found'}), 404
-                
-                if datetime.fromisoformat(flight['arrival_time']) > datetime.now():
-                    return jsonify({'error': 'Flight not completed yet'}), 400
-
-                # Проверка существующего отзыва
-                existing = conn.execute('''
-                    SELECT 1 FROM Feedback 
-                    WHERE employee_id = ? 
-                      AND flight_id = ?
-                ''', (current_user['employee_id'], data['flight_id'])).fetchone()
-
-                if existing:
-                    return jsonify({'error': 'Feedback already exists'}), 409
-
-                # Создание нового отзыва
-                conn.execute('''
-                    INSERT INTO Feedback (
-                        employee_id,
-                        flight_id,
-                        feedback_text,
-                        feedback_date
-                    ) VALUES (?, ?, ?, ?)
-                ''', (
-                    current_user['employee_id'],
-                    data['flight_id'],
-                    data['feedback_text'].strip(),
-                    datetime.now().isoformat()
-                ))
-                conn.commit()
-                return jsonify({'message': 'Feedback submitted'}), 201
-
-            except sqlite3.Error as e:
-                return jsonify({'error': str(e)}), 500
-            finally:
-                conn.close()
-
-# Serve React app
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    if path and os.path.exists(os.path.join('site', 'dist', path)):
-        return send_from_directory('site/dist', path)
-    return send_from_directory('site/dist', 'index.html')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
+        ''
