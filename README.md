@@ -1,73 +1,108 @@
-# Welcome to your Lovable project
 
-## Project info
+# FatigueGuard - Pilot Fatigue Monitoring System
 
-**URL**: https://lovable.dev/projects/80aa11ed-570b-4cf1-b82d-555692c0385e
+## Project Overview
 
-## How can I edit this code?
+FatigueGuard is an advanced system for monitoring and analyzing pilot fatigue, leveraging machine learning and real-time video analysis.
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+- Python 3.9+
+- Node.js 18+
+- npm (Node Package Manager)
+- Git
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/80aa11ed-570b-4cf1-b82d-555692c0385e) and start prompting.
+## Project Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend Setup
 
-**Use your preferred IDE**
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd crew-flight
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. Create and activate a virtual environment:
+```bash
+# On Windows
+python -m venv .venv
+.venv\Scripts\activate
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# On macOS/Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-Follow these steps:
+3. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+4. Set up environment variables:
+```bash
+# Create .env file in the root directory
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Frontend Setup
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. Install Node.js dependencies:
+```bash
+npm install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Running the Application
+
+#### Development Mode
+
+1. Ensure you're in the project root directory
+2. Run the application:
+```bash
+python run.py
+```
+
+This will start both the backend (Flask) and frontend (Vite React) servers.
+
+#### Alternative Run Methods
+
+- Start backend separately:
+```bash
+python routes.py
+```
+
+- Start frontend separately:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env` file in the root directory with the following variables:
+- `SECRET_KEY`: Flask secret key
+- `DATABASE_URL`: SQLite database path
+- `JWT_SECRET_KEY`: JWT authentication secret
+- `DEBUG`: Set to True/False
 
-**Use GitHub Codespaces**
+## Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- `backend/`: Flask backend code
+- `src/`: React frontend code
+- `neural_network/`: Machine learning models
+- `database/`: Database initialization scripts
 
-## What technologies are used for this project?
+## Contributing
 
-This project is built with:
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## License
 
-## How can I deploy this project?
+Distributed under the MIT License.
 
-Simply open [Lovable](https://lovable.dev/projects/80aa11ed-570b-4cf1-b82d-555692c0385e) and click on Share -> Publish.
+## Contact
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Project Link: [Your Project URL]
