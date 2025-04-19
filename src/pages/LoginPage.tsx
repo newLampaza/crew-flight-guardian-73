@@ -34,10 +34,13 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Устанавливаем имя пользователя в зависимости от выбранной роли
-    const userLogin = selectedRole; // pilot, admin или medical
+    if (!username || !password) {
+      alert("Пожалуйста, заполните все поля");
+      setLoading(false);
+      return;
+    }
     
-    const success = await login(userLogin, password);
+    const success = await login(selectedRole, password);
     if (success) {
       // Направляем на соответствующую страницу в зависимости от роли
       if (selectedRole === "admin") {
@@ -93,13 +96,26 @@ const LoginPage = () => {
               </Tabs>
 
               <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium">
+                  Логин
+                </label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Введите логин"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
                   Пароль
                 </label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Пароль"
+                  placeholder="Введите пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
