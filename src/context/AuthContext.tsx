@@ -99,16 +99,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(parsedUser);
           } else {
             console.error('Stored user data is incomplete:', parsedUser);
-            // Попытаемся получить информацию о пользователе с сервера
+            // Попытаемся получить информацию о пользователе с сервера через endpoint /user-profile
             try {
-              const response = await api.get('/user-info');
-              const userData = response.data.user;
-              if (userData) {
+              const response = await api.get('/user-profile');
+              const userData = response.data;
+              console.log('Fetched user profile data:', userData);
+              
+              if (userData && userData.name) {
                 localStorage.setItem('fatigue-guard-user', JSON.stringify(userData));
                 setUser(userData);
+              } else {
+                console.error('User profile data is still incomplete:', userData);
+                throw new Error('Invalid user data');
               }
             } catch (userInfoError) {
-              console.error('Failed to fetch user info:', userInfoError);
+              console.error('Failed to fetch user profile:', userInfoError);
               await logout();
             }
           }
@@ -135,22 +140,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setLoading(true);
     try {
+      // Отправляем запрос на авторизацию
       const response = await api.post('/login', { username, password });
+      
+      // Подробно логируем ответ для отладки
+      console.log('Login API response:', response.data);
+      
       const { token, user } = response.data;
 
-      // Логируем ответ для отладки
-      console.log('Login response:', response.data);
-
       if (token && user) {
-        // Проверяем наличие всех необходимых полей
-        if (!user.name) {
-          console.error('User name is missing from the API response');
-          // Если имя отсутствует, но есть username, используем его
-          if (username) {
-            user.name = username;
+        // Проверяем, есть ли в ответе полное имя пользователя
+        if (!user.name || user.name === username) {
+          console.log('Name missing or same as username, fetching complete profile...');
+          
+          try {
+            // Сохраняем токен, чтобы иметь доступ к защищенным API
+            localStorage.setItem('fatigue-guard-token', token);
+            
+            // Пробуем получить полный профиль пользователя
+            const profileResponse = await api.get('/user-profile');
+            console.log('Profile API response:', profileResponse.data);
+            
+            // Если получили данные профиля, используем их
+            if (profileResponse.data && profileResponse.data.name) {
+              console.log('Using profile data for user:', profileResponse.data);
+              localStorage.setItem('fatigue-guard-user', JSON.stringify(profileResponse.data));
+              setUser(profileResponse.data);
+              
+              toast({
+                title: "Вход выполнен успешно",
+                description: `Добро пожаловать, ${profileResponse.data.name}`,
+              });
+              
+              return true;
+            }
+          } catch (profileError) {
+            console.error('Error fetching user profile after login:', profileError);
+            // Продолжаем с данными из login response, не прерывая процесс входа
           }
         }
-
+        
+        // Если не удалось получить профиль или запрос не был выполнен,
+        // используем данные, полученные при входе
         localStorage.setItem('fatigue-guard-token', token);
         localStorage.setItem('fatigue-guard-user', JSON.stringify(user));
         setUser(user);
