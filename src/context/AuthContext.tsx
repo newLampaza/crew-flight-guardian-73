@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -12,6 +11,7 @@ export interface User {
   role: UserRole;
   position: string;
   avatarUrl: string;
+  username?: string;
 }
 
 interface AuthContextType {
@@ -140,55 +140,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setLoading(true);
     try {
-      // Отправляем запрос на авторизацию
       const response = await api.post('/login', { username, password });
-      
-      // Подробно логируем ответ для отладки
       console.log('Login API response:', response.data);
       
       const { token, user } = response.data;
 
       if (token && user) {
-        // Проверяем, есть ли в ответе полное имя пользователя
-        if (!user.name || user.name === username) {
-          console.log('Name missing or same as username, fetching complete profile...');
-          
-          try {
-            // Сохраняем токен, чтобы иметь доступ к защищенным API
-            localStorage.setItem('fatigue-guard-token', token);
-            
-            // Пробуем получить полный профиль пользователя
-            const profileResponse = await api.get('/user-profile');
-            console.log('Profile API response:', profileResponse.data);
-            
-            // Если получили данные профиля, используем их
-            if (profileResponse.data && profileResponse.data.name) {
-              console.log('Using profile data for user:', profileResponse.data);
-              localStorage.setItem('fatigue-guard-user', JSON.stringify(profileResponse.data));
-              setUser(profileResponse.data);
-              
-              toast({
-                title: "Вход выполнен успешно",
-                description: `Добро пожаловать, ${profileResponse.data.name}`,
-              });
-              
-              return true;
-            }
-          } catch (profileError) {
-            console.error('Error fetching user profile after login:', profileError);
-            // Продолжаем с данными из login response, не прерывая процесс входа
-          }
-        }
-        
-        // Если не удалось получить профиль или запрос не был выполнен,
-        // используем данные, полученные при входе
         localStorage.setItem('fatigue-guard-token', token);
         localStorage.setItem('fatigue-guard-user', JSON.stringify(user));
         setUser(user);
 
         toast({
           title: "Вход выполнен успешно",
-          description: `Добро пожаловать, ${user.name || username}`,
+          description: `Добро пожаловать, ${user.name}`,
         });
 
         return true;

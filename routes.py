@@ -121,8 +121,15 @@ def login():
                            "description": "Missing username or password"}, 400)
 
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM Users WHERE username = ?', 
-                          (auth['username'],)).fetchone()
+        
+        # Получаем информацию о пользователе с присоединением данных из таблицы Employees
+        user = conn.execute('''
+            SELECT u.*, e.name, e.role, e.position, e.image_url 
+            FROM Users u
+            LEFT JOIN Employees e ON u.employee_id = e.employee_id
+            WHERE u.username = ?
+        ''', (auth['username'],)).fetchone()
+        
         conn.close()
 
         if not user:
@@ -135,11 +142,21 @@ def login():
                            "description": "Invalid password"}, 401)
 
         access_token, refresh_token = create_tokens(user)
+        
+        # Формируем объект пользователя для отправки клиенту
+        user_data = {
+            'id': user['user_id'],
+            'username': user['username'],
+            'name': user['name'],
+            'role': user['role'],
+            'position': user['position'],
+            'avatarUrl': user['image_url']
+        }
 
         return jsonify({
             'token': access_token,
             'refresh_token': refresh_token,
-            'user': dict(user)
+            'user': user_data
         })
 
     except AuthError as e:
@@ -191,6 +208,36 @@ def refresh_token():
         return jsonify(e.error), e.status_code
     except Exception as e:
         app.logger.error(f"Token refresh error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/user-profile', methods=['GET'])
+@token_required
+def get_user_profile(current_user):
+    try:
+        conn = get_db_connection()
+        # Получаем полную информацию о пользователе
+        user_data = conn.execute('''
+            SELECT u.*, e.name, e.role, e.position, e.image_url 
+            FROM Users u
+            LEFT JOIN Employees e ON u.employee_id = e.employee_id
+            WHERE u.user_id = ?
+        ''', (current_user['user_id'],)).fetchone()
+        conn.close()
+
+        if not user_data:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({
+            'id': user_data['user_id'],
+            'username': user_data['username'],
+            'name': user_data['name'],
+            'role': user_data['role'],
+            'position': user_data['position'],
+            'avatarUrl': user_data['image_url']
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error getting user profile: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/validate-token', methods=['GET'])
@@ -1235,4 +1282,3 @@ def serve(path):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
