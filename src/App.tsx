@@ -15,10 +15,10 @@ import ForbiddenPage from "@/pages/ForbiddenPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleProtectedRoute from "@/components/RoleProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
-import AdminHome from "./pages/AdminHome";
-import MedicalHome from "./pages/MedicalHome";
-import Index from "./pages/Index";
+import AdminDashboard from "@/pages/AdminDashboard";
+import MedicalDashboard from "@/pages/MedicalDashboard";
 import { ThemeProvider } from "@/components/theme-provider";
+import "../src/index.css";
 
 function App() {
   return (
@@ -28,10 +28,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forbidden" element={<ForbiddenPage />} />
-            <Route path="/" element={<Index />} />
             
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard />} />
               <Route path="/fatigue-analysis" element={<FatigueAnalysisPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/cognitive-tests" element={<CognitiveTestsPage />} />
@@ -39,20 +38,22 @@ function App() {
               <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               
+              {/* Маршрут для администратора */}
               <Route 
                 path="/admin" 
                 element={
                   <RoleProtectedRoute allowedRoles={["admin"]}>
-                    <AdminHome />
+                    <AdminDashboard />
                   </RoleProtectedRoute>
                 } 
               />
               
+              {/* Маршрут для медицинского работника */}
               <Route 
                 path="/medical" 
                 element={
                   <RoleProtectedRoute allowedRoles={["medical"]}>
-                    <MedicalHome />
+                    <MedicalDashboard />
                   </RoleProtectedRoute>
                 } 
               />

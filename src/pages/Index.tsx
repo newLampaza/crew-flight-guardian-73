@@ -1,25 +1,14 @@
-
-import { Navigate } from 'react-router-dom';
-import { useAuth } from "@/context/AuthContext";
+// Update this page (the content is just a fallback if you fail to update the page)
 
 const Index = () => {
-  const { isAdmin, isMedical, isPilot } = useAuth();
-  
-  // Redirect based on user role
-  if (isAdmin()) {
-    return <Navigate to="/admin" replace />;
-  }
-  
-  if (isMedical()) {
-    return <Navigate to="/medical" replace />;
-  }
-  
-  if (isPilot()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Fallback for undefined roles
-  return <Navigate to="/login" replace />;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
+        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+      </div>
+    </div>
+  );
 };
 
 export default Index;
