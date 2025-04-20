@@ -115,20 +115,26 @@ const DashboardLayout: React.FC = () => {
         <div className="border-t p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
-                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+              <Avatar className="h-9 w-9 border-2 border-border/30">
+                <AvatarImage 
+                  src={user?.avatarUrl} 
+                  alt={user?.name}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-sidebar-foreground/70">{user?.position}</p>
+                <p className="text-sm font-medium leading-tight">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{user?.position}</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={logout}
-              className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-5 w-5" />
             </Button>
