@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ import {
   UserCog,
   ClipboardCheck,
   HeartPulse,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -115,13 +115,19 @@ const DashboardLayout: React.FC = () => {
         <div className="border-t p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatarUrl} alt={user?.name} />
-                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+              <Avatar className="h-10 w-10 ring-2 ring-primary/10 transition-all hover:ring-primary/30">
+                <AvatarImage 
+                  src={user?.avatarUrl} 
+                  alt={user?.name} 
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-primary/5 text-primary">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-sidebar-foreground/70">{user?.position}</p>
+              <div className="overflow-hidden">
+                <p className="truncate text-sm font-medium leading-none mb-1">{user?.name}</p>
+                <p className="truncate text-xs text-sidebar-foreground/70">{user?.position}</p>
               </div>
             </div>
             <Button
