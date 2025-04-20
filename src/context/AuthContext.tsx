@@ -93,7 +93,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = localStorage.getItem('fatigue-guard-token');
         
         if (storedUser && token) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          // Проверяем наличие всех необходимых полей
+          if (parsedUser && parsedUser.name) {
+            setUser(parsedUser);
+          } else {
+            console.error('Stored user data is incomplete:', parsedUser);
+            // Попытаемся получить информацию о пользователе с сервера
+            try {
+              const response = await api.get('/user-info');
+              const userData = response.data.user;
+              if (userData) {
+                localStorage.setItem('fatigue-guard-user', JSON.stringify(userData));
+                setUser(userData);
+              }
+            } catch (userInfoError) {
+              console.error('Failed to fetch user info:', userInfoError);
+              await logout();
+            }
+          }
           
           // Validate token on startup
           try {
@@ -120,14 +138,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/login', { username, password });
       const { token, user } = response.data;
 
+      // Логируем ответ для отладки
+      console.log('Login response:', response.data);
+
       if (token && user) {
+        // Проверяем наличие всех необходимых полей
+        if (!user.name) {
+          console.error('User name is missing from the API response');
+          // Если имя отсутствует, но есть username, используем его
+          if (username) {
+            user.name = username;
+          }
+        }
+
         localStorage.setItem('fatigue-guard-token', token);
         localStorage.setItem('fatigue-guard-user', JSON.stringify(user));
         setUser(user);
 
         toast({
           title: "Вход выполнен успешно",
-          description: `Добро пожаловать, ${user.name}`,
+          description: `Добро пожаловать, ${user.name || username}`,
         });
 
         return true;
