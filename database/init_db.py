@@ -1,4 +1,3 @@
-
 import sqlite3
 import os
 
@@ -147,6 +146,20 @@ CREATE TABLE IF NOT EXISTS TestSessions (
     test_type TEXT NOT NULL,
     start_time TEXT NOT NULL,
     questions TEXT NOT NULL,
+    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
+)
+''')
+
+# Feedback table for storing user feedback
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Feedback (
+    feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    entity_type TEXT CHECK(entity_type IN ('flight', 'cognitive_test', 'fatigue_analysis')) NOT NULL,
+    entity_id INTEGER NOT NULL,
+    rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+    comments TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
 )
 ''')

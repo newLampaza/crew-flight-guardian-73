@@ -159,6 +159,24 @@ for test in cognitive_tests_data:
         VALUES (?, ?, ?, ?, ?, ?)
     ''', test)
 
+# Add test feedback data
+feedback_data = [
+    (1, 'flight', 1, 5, 'Отличный рейс, минимальная усталость'),
+    (1, 'cognitive_test', 1, 4, 'Тест был информативным'),
+    (2, 'fatigue_analysis', 1, 5, 'Точный анализ состояния'),
+    (2, 'flight', 2, 3, 'Средняя нагрузка во время полета'),
+    (1, 'cognitive_test', 2, 5, 'Хорошо структурированный тест')
+]
+
+for feedback in feedback_data:
+    cursor.execute('''
+        INSERT INTO Feedback (
+            employee_id, entity_type, entity_id,
+            rating, comments
+        )
+        VALUES (?, ?, ?, ?, ?)
+    ''', feedback)
+
 # Commit changes and close connection
 conn.commit()
 conn.close()
