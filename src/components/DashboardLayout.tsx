@@ -125,6 +125,7 @@ const DashboardLayout: React.FC = () => {
           isMobile ? "ml-0" : "ml-64"
         )}
       >
+        
         <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
           {isMobile && (
             <Button
