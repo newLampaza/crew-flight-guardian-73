@@ -4,6 +4,7 @@ import axios from "axios";
 import { Feedback, FeedbackSubmission } from "@/types/feedback";
 import { useToast } from "@/hooks/use-toast";
 
+// Update the API endpoint to match the backend route
 const FEEDBACK_API = "/api/feedback";
 
 export function useFeedback() {
