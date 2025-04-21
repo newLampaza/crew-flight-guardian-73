@@ -31,10 +31,22 @@ export function useFeedback() {
   const submitFeedback = useMutation({
     mutationFn: async (feedback: FeedbackSubmission) => {
       console.log("Submitting feedback:", feedback);
-      const { data } = await axios.post(FEEDBACK_API, feedback);
-      return data;
+      
+      // Add additional debug info
+      console.log("POST request to:", FEEDBACK_API);
+      
+      try {
+        const { data } = await axios.post(FEEDBACK_API, feedback);
+        console.log("Success response:", data);
+        return data;
+      } catch (error) {
+        console.error("POST request failed with error:", error);
+        // Re-throw the error so it's handled by onError
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Feedback submitted successfully:", data);
       // Invalidate the feedback query to trigger a refresh
       queryClient.invalidateQueries({ queryKey: ["feedback"] });
       
