@@ -20,6 +20,9 @@ import {
   LayoutList,
 } from "lucide-react";
 import "../components/ui/schedule-view.css";
+import { useFlights, FlightApi } from "@/hooks/useFlights";
+import { useEffect, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Airport {
   airport: string;
@@ -28,156 +31,61 @@ interface Airport {
 }
 
 interface Flight {
-  id: string;
+  id: number | string;
   flightNumber: string;
   departure: Airport;
   arrival: Airport;
   duration: string;
   aircraft: string;
   status: "active" | "upcoming" | "completed" | string;
+  conditions?: string;
+  crew?: string;
 }
 
-const upcomingFlights: Flight[] = [
-  {
-    id: "1",
-    flightNumber: "SU-1492",
-    departure: {
-      airport: "Москва (SVO)",
-      time: "2025-04-15T08:30:00",
-      terminal: "D"
-    },
-    arrival: {
-      airport: "Санкт-Петербург (LED)",
-      time: "2025-04-15T10:50:00",
-      terminal: "1"
-    },
-    duration: "2ч 20м",
-    aircraft: "Airbus A320",
-    status: "active"
-  },
-  {
-    id: "2",
-    flightNumber: "SU-1196",
-    departure: {
-      airport: "Санкт-Петербург (LED)",
-      time: "2025-04-15T12:15:00",
-      terminal: "1"
-    },
-    arrival: {
-      airport: "Москва (SVO)",
-      time: "2025-04-15T14:35:00",
-      terminal: "D"
-    },
-    duration: "2ч 20м",
-    aircraft: "Airbus A320",
-    status: "upcoming"
-  },
-  {
-    id: "3",
-    flightNumber: "SU-1532",
-    departure: {
-      airport: "Москва (SVO)",
-      time: "2025-04-16T07:45:00",
-      terminal: "D"
-    },
-    arrival: {
-      airport: "Казань (KZN)",
-      time: "2025-04-16T09:30:00",
-      terminal: "1"
-    },
-    duration: "1ч 45м",
-    aircraft: "Airbus A320",
-    status: "upcoming"
-  },
-  {
-    id: "6",
-    flightNumber: "SU-1533",
-    departure: {
-      airport: "Казань (KZN)",
-      time: "2025-04-17T10:45:00",
-      terminal: "1"
-    },
-    arrival: {
-      airport: "Москва (SVO)",
-      time: "2025-04-17T12:30:00",
-      terminal: "D"
-    },
-    duration: "1ч 45м",
-    aircraft: "Airbus A320",
-    status: "upcoming"
-  },
-  {
-    id: "7",
-    flightNumber: "SU-1590",
-    departure: {
-      airport: "Москва (SVO)",
-      time: "2025-04-18T13:00:00",
-      terminal: "D"
-    },
-    arrival: {
-      airport: "Сочи (AER)",
-      time: "2025-04-18T15:30:00",
-      terminal: "B"
-    },
-    duration: "2ч 30м",
-    aircraft: "Boeing 737-800",
-    status: "upcoming"
-  },
-  {
-    id: "8",
-    flightNumber: "SU-1591",
-    departure: {
-      airport: "Сочи (AER)",
-      time: "2025-04-19T16:45:00",
-      terminal: "B"
-    },
-    arrival: {
-      airport: "Москва (SVO)",
-      time: "2025-04-19T19:15:00",
-      terminal: "D"
-    },
-    duration: "2ч 30м",
-    aircraft: "Boeing 737-800",
-    status: "upcoming"
-  }
-];
+const getStatus = (flight: FlightApi): Flight["status"] => {
+  const now = new Date();
+  const dep = new Date(flight.departure_time);
+  const arr = new Date(flight.arrival_time);
+  if (dep <= now && arr > now) return "active";
+  if (dep > now) return "upcoming";
+  if (arr < now) return "completed";
+  return "";
+};
 
-const pastFlights: Flight[] = [
-  {
-    id: "4",
-    flightNumber: "SU-1703",
-    departure: {
-      airport: "Москва (SVO)",
-      time: "2025-04-12T11:20:00",
-      terminal: "D"
-    },
-    arrival: {
-      airport: "Ростов-на-Дону (ROV)",
-      time: "2025-04-12T13:40:00",
-      terminal: "A"
-    },
-    duration: "2ч 20м",
-    aircraft: "Boeing 737-800",
-    status: "completed"
-  },
-  {
-    id: "5",
-    flightNumber: "SU-1704",
-    departure: {
-      airport: "Ростов-на-Дону (ROV)",
-      time: "2025-04-12T15:30:00",
-      terminal: "A"
-    },
-    arrival: {
-      airport: "Москва (SVO)",
-      time: "2025-04-12T17:50:00",
-      terminal: "D"
-    },
-    duration: "2ч 20м",
-    aircraft: "Boeing 737-800",
-    status: "completed"
+const getDurationString = (start: string, end: string): string => {
+  const d1 = new Date(start); const d2 = new Date(end);
+  const totalMin = Math.floor((d2.getTime() - d1.getTime()) / 60000);
+  const hr = Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  return `${hr > 0 ? `${hr}ч ` : ""}${min}м`;
+};
+
+const prepareFlights = (flights: FlightApi[] | undefined): Flight[] => {
+  if (!flights || !Array.isArray(flights)) {
+    return [];
   }
-];
+  
+  return flights.map(f => ({
+    id: f.flight_id,
+    flightNumber: f.flight_id && f.flight_id.toString().startsWith("SU")
+      ? f.flight_id.toString() : (f.crew_name ? `SU${String(f.flight_id).padStart(4, "0")}` : String(f.flight_id)),
+    departure: {
+      airport: `${f.from_city} (${f.from_code})`,
+      time: f.departure_time,
+      terminal: "-", // Можно доработать, если появятся терминалы в API
+    },
+    arrival: {
+      airport: `${f.to_city} (${f.to_code})`,
+      time: f.arrival_time,
+      terminal: "-",
+    },
+    duration: getDurationString(f.departure_time, f.arrival_time),
+    aircraft: f.aircraft,
+    status: getStatus(f),
+    conditions: f.conditions,
+    crew: f.crew_name
+  }));
+};
 
 const formatDate = (dateString: string) => {
   try {
@@ -241,58 +149,73 @@ const FlightCard = ({ flight }: { flight: Flight }) => {
   );
 };
 
-// Group flights by day of the week
-const groupFlightsByDay = (flights: Flight[], startDate: Date, endDate: Date) => {
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
-  
-  const flightsByDay = days.map(day => {
-    const dayFlights = flights.filter(flight => {
-      const departureDate = new Date(flight.departure.time);
-      return isSameDay(departureDate, day);
-    });
-    
-    return {
-      date: day,
-      flights: dayFlights
-    };
-  });
-  
-  return flightsByDay;
-};
-
 const SchedulePage = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
-  
-  // Calculate week start and end dates
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday as first day
+  const { data, isLoading, error } = useFlights();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      console.error("Ошибка загрузки расписания:", error);
+      toast({ title: "Ошибка загрузки расписания", description: "Не удалось получить расписание рейсов.", variant: "destructive" });
+    }
+  }, [error, toast]);
+
+  useEffect(() => {
+    console.log("Данные полетов:", data);
+  }, [data]);
+
+  const allFlights = useMemo(() => prepareFlights(data), [data]);
+
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  
+
+  const flightsByStatus = useMemo(() => {
+    const upcoming: Flight[] = [];
+    const past: Flight[] = [];
+    for (const f of allFlights) {
+      if (f.status === "completed") past.push(f);
+      else if (f.status === "active" || f.status === "upcoming") upcoming.push(f);
+    }
+    return { upcoming, past };
+  }, [allFlights]);
+
+  const groupFlightsByDay = (flights: Flight[]) => {
+    const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    return days.map(day => {
+      const flightsForDay = flights.filter(f => isSameDay(new Date(f.departure.time), day));
+      return { date: day, flights: flightsForDay };
+    });
+  };
+
+  const upcomingFlightsByDay = useMemo(
+    () => groupFlightsByDay(flightsByStatus.upcoming),
+    [flightsByStatus.upcoming, weekStart, weekEnd]
+  );
+  const pastFlightsByDay = useMemo(
+    () => groupFlightsByDay(flightsByStatus.past),
+    [flightsByStatus.past, weekStart, weekEnd]
+  );
+
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  
-  // Group flights by day
-  const upcomingFlightsByDay = groupFlightsByDay(upcomingFlights, weekStart, weekEnd);
-  const pastFlightsByDay = groupFlightsByDay(pastFlights, weekStart, weekEnd);
-  
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setCurrentDate(date);
       setShowCalendar(false);
     }
   };
-  
+
   return (
     <div className="space-y-6 schedule-container">
       <div className="schedule-header">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Расписание полетов</h1>
-        
         <div className="flex items-center gap-2">
           <div className="month-navigation">
             <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            
             <Popover open={showCalendar} onOpenChange={setShowCalendar}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="month-selector">
@@ -310,29 +233,27 @@ const SchedulePage = () => {
                 />
               </PopoverContent>
             </Popover>
-            
             <Button variant="outline" size="icon" onClick={nextMonth} className="h-8 w-8">
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-      
       <Tabs defaultValue="upcoming" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="upcoming">Предстоящие рейсы</TabsTrigger>
           <TabsTrigger value="past">Прошедшие рейсы</TabsTrigger>
         </TabsList>
-        
         <TabsContent value="upcoming">
           <div className="week-view">
-            {upcomingFlightsByDay.map((day, index) => (
+            {isLoading ? (
+              <div className="text-center w-full py-8">Загрузка...</div>
+            ) : upcomingFlightsByDay.map((day, index) => (
               <div key={index} className="day-column">
                 <div className="day-header">
                   <div className="text-sm font-bold">{formatWeekday(day.date)}</div>
                   <div className="text-xs text-muted-foreground">{formatDayMonth(day.date)}</div>
                 </div>
-                
                 {day.flights.length > 0 ? (
                   <div className="space-y-2">
                     {day.flights.map((flight) => (
@@ -348,16 +269,16 @@ const SchedulePage = () => {
             ))}
           </div>
         </TabsContent>
-        
         <TabsContent value="past">
           <div className="week-view">
-            {pastFlightsByDay.map((day, index) => (
+            {isLoading ? (
+              <div className="text-center w-full py-8">Загрузка...</div>
+            ) : pastFlightsByDay.map((day, index) => (
               <div key={index} className="day-column">
                 <div className="day-header">
                   <div className="text-sm font-bold">{formatWeekday(day.date)}</div>
                   <div className="text-xs text-muted-foreground">{formatDayMonth(day.date)}</div>
                 </div>
-                
                 {day.flights.length > 0 ? (
                   <div className="space-y-2">
                     {day.flights.map((flight) => (

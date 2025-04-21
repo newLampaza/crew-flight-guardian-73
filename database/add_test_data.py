@@ -1,8 +1,7 @@
-
 import sqlite3
 import os
 from datetime import datetime, timedelta
-import hashlib
+import random
 from werkzeug.security import generate_password_hash
 
 # Database path
@@ -64,15 +63,57 @@ for crew in crew_members_data:
         VALUES (?, ?, ?)
     ''', crew)
 
-# Add test flights
+# Генерация большого набора тестовых рейсов
+airports = [
+    ('SVO', 'Москва'), ('LED', 'Санкт-Петербург'), ('KZN', 'Казань'),
+    ('OVB', 'Новосибирск'), ('AER', 'Сочи'), ('ROV', 'Ростов-на-Дону'),
+    ('SVX', 'Екатеринбург')
+]
+aircrafts = ['Boeing 737', 'Airbus A320', 'Superjet 100', 'Boeing 777']
+conditions_list = ['Normal', 'Bad weather', 'Maintenance', 'Delayed']
+terminals = ['A', 'B', 'D', '1', '2']
+
+# Для 2 экипажей и 2 месяцев в обе стороны
 now = datetime.now()
-flights_data = [
+flight_id = 1
+
+for crew_id in [1, 2]:
+    for day_delta in range(-30, 31):  # ±1 месяц от текущей даты
+        date = now + timedelta(days=day_delta)
+        departure_hour = random.choice([6, 8, 12, 15, 18, 21])
+        journey_time_min = random.choice([80, 100, 120, 145, 170])
+        from_airport, from_city = random.choice(airports)
+        to_airport, to_city = random.choice([ap for ap in airports if ap[0] != from_airport])
+        departure = date.replace(hour=departure_hour, minute=0, second=0, microsecond=0)
+        arrival = departure + timedelta(minutes=journey_time_min)
+        aircraft = random.choice(aircrafts)
+        conditions = random.choice(conditions_list)
+        flight_number = f"SU{str(flight_id).zfill(4)}"
+        flight_id += 1
+
+        cursor.execute('''
+            INSERT INTO Flights (
+                crew_id, flight_number, departure_time, arrival_time,
+                from_code, from_city, to_code, to_city,
+                aircraft, conditions
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            crew_id, flight_number, 
+            departure.strftime('%Y-%m-%dT%H:%M:%S'), 
+            arrival.strftime('%Y-%m-%dT%H:%M:%S'),
+            from_airport, from_city,
+            to_airport, to_city,
+            aircraft, conditions
+        ))
+
+# Add some classic test flights for demo scenarios
+demo_flights = [
     (1, 'SU1234', now + timedelta(days=1), now + timedelta(days=1, hours=3), 'SVO', 'Москва', 'LED', 'Санкт-Петербург', 'Boeing 737', 'Normal'),
     (1, 'SU1235', now + timedelta(days=2), now + timedelta(days=2, hours=6), 'LED', 'Санкт-Петербург', 'SVO', 'Москва', 'Boeing 737', 'Normal'),
     (2, 'SU1236', now + timedelta(days=3), now + timedelta(days=3, hours=4), 'SVO', 'Москва', 'KZN', 'Казань', 'Airbus A320', 'Normal')
 ]
 
-for flight in flights_data:
+for flight in demo_flights:
     cursor.execute('''
         INSERT INTO Flights (
             crew_id, flight_number, departure_time, arrival_time,
@@ -80,9 +121,14 @@ for flight in flights_data:
             aircraft, conditions
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', flight)
+    ''', (
+        flight[0], flight[1], 
+        flight[2].strftime('%Y-%m-%dT%H:%M:%S'),
+        flight[3].strftime('%Y-%m-%dT%H:%M:%S'),
+        flight[4], flight[5], flight[6], flight[7], flight[8], flight[9]
+    ))
 
-# Add medical checks
+# Add medical checks (оставим прежнее)
 medical_checks_data = [
     (1, '2024-01-01', '2025-01-01', 'passed', 'Dr. Smith', 'Regular check'),
     (2, '2024-01-15', '2025-01-15', 'passed', 'Dr. Johnson', 'Regular check')
@@ -97,7 +143,7 @@ for check in medical_checks_data:
         VALUES (?, ?, ?, ?, ?, ?)
     ''', check)
 
-# Add cognitive tests
+# Add cognitive tests (оставим прежнее)
 cognitive_tests_data = [
     (1, datetime.now().isoformat(), 'attention', 95.5, 300, '{"questions": 20, "correct": 19}'),
     (1, datetime.now().isoformat(), 'memory', 88.0, 240, '{"questions": 15, "correct": 13}'),
@@ -117,4 +163,4 @@ for test in cognitive_tests_data:
 conn.commit()
 conn.close()
 
-print("Test data successfully added to the database!")
+print("Тестовые данные успешно добавлены в базу данных! (много рейсов для расписания)")
