@@ -921,8 +921,6 @@ def get_fatigue_data(current_user):
     conn.close()
     return jsonify([dict(row) for row in data])
 
-
-
 @app.route('/api/flight-eligibility', methods=['GET'])
 @token_required
 def get_flight_eligibility(current_user):
@@ -1154,9 +1152,6 @@ def get_test_details(current_user, test_id):
     finally:
         conn.close()
 
-
-
-
 @app.route('/api/feedback', methods=['GET', 'POST'])
 @token_required
 def handle_feedback(current_user):
@@ -1165,111 +1160,124 @@ def handle_feedback(current_user):
             conn = get_db_connection()
             feedbacks = conn.execute('''
                 SELECT 
-                    f.feedback_id,
-                    f.feedback_text,
-                    f.feedback_date,
-                    fl.from_code,
-                    fl.to_code,
-                    fl.departure_time,
-                    fl.arrival_time
+                    f.*,
+                    CASE 
+                        WHEN f.entity_type = 'flight' THEN (
+                            SELECT from_code || ' - ' || to_code 
+                            FROM Flights 
+                            WHERE flight_id = f.entity_id
+                        )
+                        WHEN f.entity_type = 'cognitive_test' THEN (
+                            SELECT test_type || ' (' || score || '%)'
+                            FROM CognitiveTests 
+                            WHERE test_id = f.entity_id
+                        )
+                        WHEN f.entity_type = 'fatigue_analysis' THEN (
+                            SELECT fatigue_level || ' (' || (neural_network_score * 100) || '%)'
+                            FROM FatigueAnalysis 
+                            WHERE analysis_id = f.entity_id
+                        )
+                    END as entity_info,
+                    datetime(f.created_at) as formatted_date
                 FROM Feedback f
-                JOIN Flights fl ON f.flight_id = fl.flight_id
                 WHERE f.employee_id = ?
-                ORDER BY f.feedback_date DESC
+                ORDER BY f.created_at DESC
             ''', (current_user['employee_id'],)).fetchall()
             
-            return jsonify([dict(fb) for fb in feedbacks])
+            return jsonify([{
+                'id': f['feedback_id'],
+                'type': f['entity_type'],
+                'entityId': f['entity_id'],
+                'entityInfo': f['entity_info'],
+                'rating': f['rating'],
+                'comments': f['comments'],
+                'date': f['formatted_date']
+            } for f in feedbacks])
         
         except sqlite3.Error as e:
-            return jsonify({'error': str(e)}), 500
+            app.logger.error(f"Database error in feedback GET: {str(e)}")
+            return jsonify({'error': 'Failed to fetch feedback'}), 500
         finally:
-            conn.close()
-
-    elif request.method == 'POST':
-        data = request.get_json()
-        
-        # Обработка оценки анализа усталости
-        if 'analysis_id' in data and 'score' in data:
-            try:
-                if not 1 <= data['score'] <= 5:
-                    return jsonify({'error': 'Score must be between 1 and 5'}), 400
-
-                conn = get_db_connection()
-                result = conn.execute('''
-                    UPDATE FatigueAnalysis 
-                    SET feedback_score = ?
-                    WHERE analysis_id = ? 
-                      AND employee_id = ?
-                    RETURNING *
-                ''', (
-                    data['score'],
-                    data['analysis_id'],
-                    current_user['employee_id']
-                )).fetchone()
-                
-                if not result:
-                    return jsonify({'error': 'Analysis not found'}), 404
-                
-                conn.commit()
-                return jsonify({'status': 'success'})
-
-            except sqlite3.Error as e:
-                return jsonify({'error': str(e)}), 500
-            finally:
+            if 'conn' in locals():
                 conn.close()
 
-        # Обработка отзыва о рейсе
-        else:
-            required_fields = ['flight_id', 'feedback_text']
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+                
+            required_fields = ['entityType', 'entityId', 'rating', 'comments']
             if not all(field in data for field in required_fields):
-                return jsonify({'error': f'Missing fields: {required_fields}'}), 400
+                return jsonify({'error': 'Missing required fields'}), 400
 
-            try:
-                conn = get_db_connection()
-                
-                # Проверка существования и завершенности рейса
-                flight = conn.execute('''
-                    SELECT arrival_time 
-                    FROM Flights 
-                    WHERE flight_id = ?
-                ''', (data['flight_id'],)).fetchone()
+            if not 1 <= int(data['rating']) <= 5:
+                return jsonify({'error': 'Rating must be between 1 and 5'}), 400
 
-                if not flight:
-                    return jsonify({'error': 'Flight not found'}), 404
-                
-                if datetime.fromisoformat(flight['arrival_time']) > datetime.now():
-                    return jsonify({'error': 'Flight not completed yet'}), 400
+            conn = get_db_connection()
+            
+            # Check if entity exists
+            entity_exists = False
+            if data['entityType'] == 'flight':
+                entity_exists = conn.execute('SELECT 1 FROM Flights WHERE flight_id = ?', 
+                                          (data['entityId'],)).fetchone() is not None
+            elif data['entityType'] == 'cognitive_test':
+                entity_exists = conn.execute('SELECT 1 FROM CognitiveTests WHERE test_id = ?', 
+                                          (data['entityId'],)).fetchone() is not None
+            elif data['entityType'] == 'fatigue_analysis':
+                entity_exists = conn.execute('SELECT 1 FROM FatigueAnalysis WHERE analysis_id = ?', 
+                                          (data['entityId'],)).fetchone() is not None
+            
+            if not entity_exists:
+                return jsonify({'error': f'{data["entityType"]} not found'}), 404
 
-                # Проверка существующего отзыва
-                existing = conn.execute('''
-                    SELECT 1 FROM Feedback 
-                    WHERE employee_id = ? 
-                      AND flight_id = ?
-                ''', (current_user['employee_id'], data['flight_id'])).fetchone()
+            # Check for existing feedback
+            existing = conn.execute('''
+                SELECT 1 FROM Feedback 
+                WHERE employee_id = ? 
+                AND entity_type = ? 
+                AND entity_id = ?
+            ''', (
+                current_user['employee_id'],
+                data['entityType'],
+                data['entityId']
+            )).fetchone()
 
-                if existing:
-                    return jsonify({'error': 'Feedback already exists'}), 409
+            if existing:
+                return jsonify({'error': 'Feedback already exists'}), 409
 
-                # Создание нового отзыва
-                conn.execute('''
-                    INSERT INTO Feedback (
-                        employee_id,
-                        flight_id,
-                        feedback_text,
-                        feedback_date
-                    ) VALUES (?, ?, ?, ?)
-                ''', (
-                    current_user['employee_id'],
-                    data['flight_id'],
-                    data['feedback_text'].strip(),
-                    datetime.now().isoformat()
-                ))
-                conn.commit()
-                return jsonify({'message': 'Feedback submitted'}), 201
+            # Insert new feedback
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO Feedback (
+                    employee_id, entity_type, entity_id,
+                    rating, comments, created_at
+                ) VALUES (?, ?, ?, ?, ?, datetime('now'))
+            ''', (
+                current_user['employee_id'],
+                data['entityType'],
+                data['entityId'],
+                data['rating'],
+                data['comments'],
+            ))
+            
+            conn.commit()
+            feedback_id = cursor.lastrowid
+            
+            return jsonify({
+                'id': feedback_id,
+                'message': 'Feedback submitted successfully'
+            }), 201
 
-            except sqlite3.Error as e:
-                return jsonify({'error': str(e)}), 500
-            finally:
+        except sqlite3.Error as e:
+            app.logger.error(f"Database error in feedback POST: {str(e)}")
+            return jsonify({'error': 'Failed to save feedback'}), 500
+        except Exception as e:
+            app.logger.error(f"Unexpected error in feedback POST: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
+        finally:
+            if 'conn' in locals():
                 conn.close()
 
 # Serve React app
