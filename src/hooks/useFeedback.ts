@@ -10,11 +10,17 @@ export function useFeedback() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: feedbackHistory = [], isLoading } = useQuery({
+  const { data: feedbackHistory = [], isLoading, error } = useQuery({
     queryKey: ["feedback"],
     queryFn: async () => {
-      const { data } = await axios.get<Feedback[]>(FEEDBACK_API);
-      return data;
+      try {
+        const { data } = await axios.get<Feedback[]>(FEEDBACK_API);
+        // Ensure we always return an array, even if the API returns something else
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("Error fetching feedback:", error);
+        return [];
+      }
     }
   });
 
@@ -40,8 +46,9 @@ export function useFeedback() {
   });
 
   return {
-    feedbackHistory,
+    feedbackHistory: Array.isArray(feedbackHistory) ? feedbackHistory : [],
     isLoading,
+    error,
     submitFeedback: submitFeedback.mutate
   };
 }
