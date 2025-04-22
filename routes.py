@@ -214,7 +214,7 @@ def refresh_token():
 def get_user_profile(current_user):
     try:
         conn = get_db_connection()
-        # Получаем полную информацию о пользователе
+        # Получаем полную и��формацию о пользователе
         user_data = conn.execute('''
             SELECT u.*, e.name, e.role, e.position, e.image_url 
             FROM Users u
@@ -705,7 +705,7 @@ def start_test(current_user):
                     'error': 'Повторная попытка доступна через 10 минут',
                     'retry_after': 600 - int((datetime.now() - last_time).total_seconds())
                 }), 429
-        if test_type not in ['attention', 'memory', 'reaction']:
+        if test_type not in ['attention', 'memory', 'reaction', 'cognitive']:
             return jsonify({'error': 'Invalid test type'}), 400
 
         questions = generate_test_questions(test_type)
