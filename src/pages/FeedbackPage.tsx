@@ -18,13 +18,11 @@ const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [flightRating, setFlightRating] = useState(0);
   const [selectedFlightId, setSelectedFlightId] = useState<number | null>(null);
-  const { feedbackHistory, isLoading, submitFeedback } = useFeedback();
+  const { feedbackHistory, isLoading, submitFeedback, hasFeedbackForEntity } = useFeedback();
   const { data: flights = [], isLoading: flightsLoading } = useFlights();
 
   const hasExistingFeedback = (flightId: number) => {
-    return feedbackHistory.some(feedback => 
-      feedback.entityId === flightId && feedback.type === 'flight'
-    );
+    return hasFeedbackForEntity('flight', flightId);
   };
 
   const isInCurrentWeek = (date: Date) => {
@@ -42,7 +40,6 @@ const FeedbackPage = () => {
 
   useEffect(() => {
     if (flights?.length > 0 && !selectedFlightId) {
-      // Find the first available completed flight from the current week without feedback
       const now = new Date();
       const availableFlight = flights.find(flight => {
         const arrivalDate = new Date(flight.arrival_time);
@@ -52,7 +49,6 @@ const FeedbackPage = () => {
       if (availableFlight) {
         setSelectedFlightId(availableFlight.flight_id);
       } else if (flights.length > 0) {
-        // Default to first flight if no available flights found
         setSelectedFlightId(flights[0].flight_id);
       }
     }
@@ -65,7 +61,6 @@ const FeedbackPage = () => {
   
   const currentFlightHasFeedback = selectedFlightId ? hasExistingFeedback(selectedFlightId) : false;
 
-  // Auto-submit feedback only for flights that are over a week old
   useEffect(() => {
     if (!flights?.length || !submitFeedback) return;
 
@@ -79,6 +74,7 @@ const FeedbackPage = () => {
     });
 
     if (flight) {
+      console.log(`Auto-submitting feedback for old flight: ${flight.flight_id}`);
       submitFeedback({
         entityType: "flight",
         entityId: flight.flight_id,
