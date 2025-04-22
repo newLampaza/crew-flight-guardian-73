@@ -84,14 +84,21 @@ export function useFeedback() {
     onError: (error: any) => {
       console.error("Error submitting feedback:", error);
       
+      // Handle 409 Conflict (feedback already exists)
       if (error.response?.status === 409) {
-        // Don't show toast for automatic submissions
-        if (error.config?.data && JSON.parse(error.config.data).comments !== "") {
+        // Check if this is an automatic submission (empty comments)
+        const isAutoSubmission = error.config?.data ? 
+          JSON.parse(error.config.data).comments === "" : false;
+        
+        if (!isAutoSubmission) {
           toast({
             title: "Отзыв уже существует",
             description: "Вы уже оставили отзыв для этого объекта",
             variant: "default"
           });
+        } else {
+          // For automatic submissions, just log silently without showing toast
+          console.log("Auto-feedback already exists for this entity, ignoring silently");
         }
       } else {
         toast({

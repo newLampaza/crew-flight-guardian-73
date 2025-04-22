@@ -32,15 +32,15 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Generate a unique ID for the description if needed
+  // Generate a unique ID for the description
   const descriptionId = React.useId();
   
-  // Check if aria-describedby is already provided in props
+  // Check if aria-describedby is already provided in props or if a DialogDescription exists as a child
   const hasDescription = 'aria-describedby' in props || React.Children.toArray(children).some(
     child => React.isValidElement(child) && child.type === DialogDescription
   );
 
-  // Only add aria-describedby if not already provided and no DialogDescription exists
+  // Only add aria-describedby if needed
   const accessibilityProps = !hasDescription ? { 'aria-describedby': descriptionId } : {};
 
   return (
