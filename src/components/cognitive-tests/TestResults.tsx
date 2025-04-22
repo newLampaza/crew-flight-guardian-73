@@ -1,153 +1,203 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BadgeCheck, AlertCircle, Clock, Brain, Calendar } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Clock, CheckCircle, XCircle } from "lucide-react";
-import { TestResult } from '@/types/cognitivetests';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { TestResult } from "@/types/cognitivetests";
 
 interface TestResultsProps {
   result: TestResult;
-  onClose: () => void;
+  onClose?: () => void;
   onRetry?: () => void;
 }
 
-export const TestResults: React.FC<TestResultsProps> = ({ result, onClose, onRetry }) => {
-  // Получить статус теста на основе оценки
-  const getTestStatus = (score: number) => {
-    if (score >= 85) return "passed";
-    if (score >= 70) return "warning";
-    return "failed";
-  };
-  
-  const status = getTestStatus(result.score);
-  
-  // Получить цвет статуса
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "passed": return "text-status-good";
-      case "warning": return "text-status-warning";
-      case "failed": return "text-status-danger";
-      default: return "text-gray-500";
+export const TestResults: React.FC<TestResultsProps> = ({
+  result,
+  onClose,
+  onRetry
+}) => {
+  // Форматируем дату
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ru-RU', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
     }
   };
-  
-  // Получить текст статуса
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "passed": return "Пройден";
-      case "warning": return "Требуется повторный тест";
-      case "failed": return "Не пройден";
-      default: return "Нет данных";
-    }
-  };
-  
-  // Получить иконку статуса
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "passed": return <CheckCircle className="h-5 w-5 text-status-good" />;
-      case "warning": return <Clock className="h-5 w-5 text-status-warning" />;
-      case "failed": return <XCircle className="h-5 w-5 text-status-danger" />;
-      default: return null;
-    }
-  };
-  
-  // Форматировать дату и время
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-  
-  // Форматировать время в секундах в мм:сс
-  const formatDuration = (seconds: number) => {
+
+  // Форматируем время
+  const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // Получаем цвет прогресса в зависимости от результата
+  const getProgressColor = (score: number) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Получаем текстовый статус результата
+  const getScoreStatus = (score: number) => {
+    if (score >= 80) return 'Отлично';
+    if (score >= 60) return 'Хорошо';
+    if (score >= 40) return 'Удовлетворительно';
+    return 'Требуется улучшение';
+  };
+
+  // Получаем локализованное название типа теста
+  const getTestTypeName = (type: string) => {
+    const types: Record<string, string> = {
+      'attention': 'Тест внимания',
+      'memory': 'Тест памяти',
+      'reaction': 'Тест реакции',
+      'cognitive': 'Когнитивный тест'
+    };
+    return types[type] || type;
+  };
+
+  // Категоризация ошибок по типам вопросов
+  const categorizeErrors = () => {
+    if (!result.mistakes || result.mistakes.length === 0) return {};
+    
+    const categories: Record<string, any[]> = {};
+    
+    result.mistakes.forEach(mistake => {
+      const questionType = getQuestionTypeFromText(mistake.question);
+      if (!categories[questionType]) {
+        categories[questionType] = [];
+      }
+      categories[questionType].push(mistake);
+    });
+    
+    return categories;
+  };
+  
+  const getQuestionTypeFromText = (questionText: string) => {
+    if (questionText.includes('последовательность')) return 'Последовательности';
+    if (questionText.includes('слова')) return 'Запоминание слов';
+    if (questionText.includes('изображения')) return 'Запоминание изображений';
+    if (questionText.includes('отличия')) return 'Поиск отличий';
+    if (questionText.includes('треугольников')) return 'Подсчет фигур';
+    if (questionText.includes('красные объекты')) return 'Выбор объектов';
+    if (questionText.includes('цифра')) return 'Числовые последовательности';
+    if (questionText.includes('лишнее')) return 'Вербальная логика';
+    if (questionText.includes('решите пример')) return 'Математическая логика';
+    if (questionText.includes('поворота')) return 'Пространственное мышление';
+    
+    return 'Другие вопросы';
+  };
+
+  // Категории ошибок
+  const errorCategories = categorizeErrors();
+
   return (
-    <div className="space-y-6">
-      <div className="bg-muted rounded-md p-6 text-center">
-        <div className="text-5xl font-bold mb-2 text-primary">{result.score}%</div>
-        <div className="flex items-center justify-center">
-          {getStatusIcon(status)}
-          <span className={`ml-1 ${getStatusColor(status)}`}>
-            {getStatusText(status)}
-          </span>
-        </div>
-      </div>
-      
+    <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Детали теста</CardTitle>
-          <CardDescription>
-            {formatDateTime(result.test_date)} • Длительность: {formatDuration(result.duration)}
+        <CardHeader className="pb-2">
+          <CardTitle>{getTestTypeName(result.test_type)}</CardTitle>
+          <CardDescription className="flex items-center">
+            <Calendar className="h-4 w-4 mr-1" /> {formatDate(result.test_date)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium">Результат:</span>
-              <span className="font-bold">{result.score}%</span>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Результат:</span>
+                <span className="text-lg font-bold">{result.score}%</span>
+              </div>
+              <Progress 
+                value={result.score} 
+                className={getProgressColor(result.score)}
+              />
+              <div className="text-sm text-right">{getScoreStatus(result.score)}</div>
             </div>
-            <Progress value={result.score} className="h-2" />
-          </div>
-          
-          {result.mistakes && result.mistakes.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Ошибки ({result.mistakes.length}):</h4>
-              <div className="space-y-3">
-                {result.mistakes.map((mistake, index) => (
-                  <Alert key={index} variant="destructive" className="py-3">
-                    <div className="flex items-start">
-                      <XCircle className="h-5 w-5 mt-0.5 mr-2 flex-shrink-0" />
-                      <div>
-                        <AlertTitle className="text-sm font-medium">Вопрос: {mistake.question}</AlertTitle>
-                        <AlertDescription className="text-sm mt-1">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="font-medium">Ваш ответ:</div>
-                              <div className="text-muted-foreground">{mistake.user_answer || 'Нет ответа'}</div>
-                            </div>
-                            <div>
-                              <div className="font-medium">Правильный ответ:</div>
-                              <div>{mistake.correct_answer}</div>
-                            </div>
-                          </div>
-                        </AlertDescription>
-                      </div>
-                    </div>
-                  </Alert>
-                ))}
+            
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="flex items-center">
+                <BadgeCheck className="h-4 w-4 mr-2 text-green-500" />
+                <span className="text-sm">
+                  {result.details.correct_answers} из {result.details.total_questions} правильно
+                </span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2 text-blue-500" />
+                <span className="text-sm">
+                  Время: {formatTime(result.duration)}
+                </span>
               </div>
             </div>
-          )}
-          
-          <div className="bg-muted p-4 rounded-md">
-            <h4 className="font-medium mb-2">Рекомендации:</h4>
-            <p className="text-sm text-muted-foreground">
-              {status === "passed" 
-                ? "Отличный результат! Продолжайте в том же духе."
-                : status === "warning"
-                ? "Рекомендуется повторно пройти тест в ближайшее время для улучшения показателей."
-                : "Необходимо пройти повторный тест с целью улучшения результатов. Обратите внимание на допущенные ошибки."}
-            </p>
+            
+            <Separator />
+            
+            {Object.keys(errorCategories).length > 0 ? (
+              <Accordion type="single" collapsible className="w-full">
+                {Object.entries(errorCategories).map(([category, mistakes], index) => (
+                  <AccordionItem key={index} value={`item-${index}`}>
+                    <AccordionTrigger className="text-sm">
+                      <div className="flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                        {category} ({mistakes.length})
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-2 text-sm">
+                        {mistakes.map((mistake, i) => (
+                          <li key={i} className="border-l-2 border-amber-500 pl-2">
+                            <p className="font-medium">{mistake.question}</p>
+                            <p className="text-red-500">Ваш ответ: {mistake.user_answer}</p>
+                            <p className="text-green-500">Правильный ответ: {mistake.correct_answer}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <div className="flex items-center justify-center py-2">
+                <BadgeCheck className="h-5 w-5 mr-2 text-green-500" />
+                <span>Все ответы верны!</span>
+              </div>
+            )}
+            
+            {result.details.error_analysis && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">Анализ по категориям вопросов:</h4>
+                <div className="space-y-1">
+                  {Object.entries(result.details.error_analysis).map(([type, count], i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span>{type}</span>
+                      <span>{count} ошибок</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Закрыть
-          </Button>
+        <CardFooter className="flex justify-between">
           {onRetry && (
-            <Button onClick={onRetry}>
-              Пройти повторно
+            <Button variant="outline" onClick={onRetry}>
+              Повторить тест
+            </Button>
+          )}
+          {onClose && (
+            <Button onClick={onClose}>
+              Закрыть
             </Button>
           )}
         </CardFooter>

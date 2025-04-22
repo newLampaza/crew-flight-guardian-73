@@ -13,8 +13,15 @@ export interface TestQuestion {
   type: string;
   question: string;
   options?: string[];
+  image?: string;
+  images?: string[];
+  grid?: any[][];
+  matrix?: number[][];
+  stimulus?: string | string[];
   delay?: number;
   correct_answer?: string;
+  answer_options?: string[];
+  question_text?: string;
 }
 
 export interface TestSession {
@@ -29,7 +36,11 @@ export interface TestResult {
   test_type: string;
   score: number;
   duration: number;
-  details: Record<string, any>;
+  details: {
+    total_questions: number;
+    correct_answers: number;
+    error_analysis?: Record<string, number>;
+  };
   mistakes: TestMistake[];
 }
 
@@ -42,4 +53,12 @@ export interface TestMistake {
 export interface TestResultSummary {
   score: number;
   test_id: number;
+  total_questions?: number;
+  correct_answers?: number;
+}
+
+export interface QuestionResponse {
+  questionId: string;
+  answer: string;
+  timeTaken?: number;
 }

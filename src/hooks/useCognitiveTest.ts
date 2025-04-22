@@ -17,8 +17,8 @@ export const useCognitiveTest = () => {
     answers: Record<string, string>;
   } | null>(null);
   const [testResults, setTestResults] = useState<TestResult | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated, user, refreshToken } = useAuth();
 
   const startTest = async (testId: string) => {
     try {
@@ -27,6 +27,19 @@ export const useCognitiveTest = () => {
         toast({
           title: "Ошибка авторизации",
           description: "Пожалуйста, войдите в систему снова",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Обновляем токен для обеспечения валидности
+      try {
+        await refreshToken();
+      } catch (refreshError) {
+        console.error("Failed to refresh token:", refreshError);
+        toast({
+          title: "Ошибка авторизации",
+          description: "Не удалось обновить токен. Пожалуйста, войдите снова",
           variant: "destructive"
         });
         return;
@@ -48,6 +61,11 @@ export const useCognitiveTest = () => {
       setTestInProgress(true);
       setTestComplete(false);
       setIsLoading(false);
+
+      toast({
+        title: "Тест начат",
+        description: `Тест состоит из ${session.questions.length} вопросов`,
+      });
     } catch (error) {
       console.error("Failed to start test:", error);
       
@@ -88,12 +106,28 @@ export const useCognitiveTest = () => {
         currentQuestion: nextQuestion,
         answers: updatedAnswers
       });
+
+      // Уведомление о прогрессе
+      const progress = Math.round((nextQuestion / currentTestSession.questions.length) * 100);
+      if (progress % 25 === 0) {
+        toast({
+          title: `Прогресс: ${progress}%`,
+          description: `Выполнено ${nextQuestion} из ${currentTestSession.questions.length} вопросов`,
+        });
+      }
     }
   };
 
   const submitTest = async (testId: string, answers: Record<string, string>) => {
     try {
       setIsLoading(true);
+      
+      // Обновляем токен перед отправкой результатов
+      try {
+        await refreshToken();
+      } catch (refreshError) {
+        console.error("Failed to refresh token before submitting:", refreshError);
+      }
       
       const result = await cognitiveTestsApi.submitTest(testId, answers);
       const fullResults = await cognitiveTestsApi.getTestResults(result.test_id);
@@ -102,20 +136,37 @@ export const useCognitiveTest = () => {
       setTestInProgress(false);
       setTestComplete(true);
       
+      // Более информативное уведомление
+      let statusText = "удовлетворительно";
+      if (result.score >= 80) statusText = "отлично";
+      else if (result.score >= 60) statusText = "хорошо";
+      else if (result.score < 40) statusText = "требуется улучшение";
+      
       toast({
         title: "Тест завершен",
-        description: `Ваш результат: ${result.score}%`,
+        description: `Ваш результат: ${result.score}% (${statusText})`,
       });
       
       setIsLoading(false);
       return fullResults;
     } catch (error) {
       console.error("Failed to submit test:", error);
+      
+      // Обработка различных ошибок
+      let errorMessage = "Не удалось отправить результаты теста";
+      
+      if (error.response?.status === 401) {
+        errorMessage = "Ошибка авторизации. Пожалуйста, войдите в систему снова";
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
       toast({
         title: "Ошибка",
-        description: "Не удалось отправить результаты теста",
+        description: errorMessage,
         variant: "destructive"
       });
+      
       setIsLoading(false);
       return null;
     }
@@ -135,6 +186,7 @@ export const useCognitiveTest = () => {
     toast({
       title: "Время истекло",
       description: "Тест будет автоматически завершен",
+      variant: "warning"
     });
     
     submitTest(currentTestSession.testId, currentTestSession.answers);

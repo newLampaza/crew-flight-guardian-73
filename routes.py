@@ -251,17 +251,53 @@ def logout(current_user):
     return jsonify({'message': 'Successfully logged out'})
 
 def generate_test_questions(test_type):
+    """Генерирует вопросы для когнитивных тестов в зависимости от типа теста"""
     if test_type == 'attention':
         return [
             {
                 'id': str(uuid.uuid4()),
-                'type': 'image',
-                'question': 'https://i.imgur.com/3JYQZ7A.png',
+                'type': 'difference',
+                'question': 'Найдите отличия между изображениями',
                 'options': [
                     'https://i.imgur.com/3JYQZ7A.png',
                     'https://i.imgur.com/5T7v8dR.png'
                 ],
                 'correct_answer': 'https://i.imgur.com/5T7v8dR.png'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'count',
+                'question': 'Сколько треугольников на изображении?',
+                'options': ['4', '5', '6', '7'],
+                'image': 'https://i.imgur.com/ZG8C9H1.png',
+                'correct_answer': '6'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'select',
+                'question': 'Выберите все красные объекты',
+                'options': ['Яблоко', 'Банан', 'Клубника', 'Лимон', 'Вишня'],
+                'correct_answer': 'Яблоко,Клубника,Вишня'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'pattern',
+                'question': 'Какое число должно быть следующим в последовательности: 2, 4, 8, 16, ?',
+                'options': ['24', '32', '30', '42'],
+                'correct_answer': '32'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'grid',
+                'question': 'Запомните расположение символов и выберите позицию, где был символ #',
+                'grid': [
+                    ['@', '$', '%'],
+                    ['&', '#', '*'],
+                    ['!', '?', '+']
+                ],
+                'options': ['1-1', '1-2', '1-3', '2-1', '2-2', '2-3', '3-1', '3-2', '3-3'],
+                'correct_answer': '2-2',
+                'delay': 3
             }
         ]
     elif test_type == 'memory':
@@ -272,6 +308,46 @@ def generate_test_questions(test_type):
                 'question': 'Запомните последовательность: 7294',
                 'correct_answer': '7294',
                 'delay': 5
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'words',
+                'question': 'Запомните следующие слова: Дом, Кот, Сад, Луна, Река',
+                'options': ['Дом', 'Мяч', 'Кот', 'Сон', 'Сад', 'Снег', 'Луна', 'Река', 'Гора'],
+                'correct_answer': 'Дом,Кот,Сад,Луна,Река',
+                'delay': 8
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'images',
+                'question': 'Запомните изображения и их порядок',
+                'images': ['🍎', '🚗', '🏠', '📱'],
+                'options': ['🍎', '🚗', '🏠', '📱', '💻', '🎮'],
+                'correct_answer': '🍎,🚗,🏠,📱',
+                'delay': 6
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'pairs',
+                'question': 'Запомните пары: A-1, B-2, C-3, D-4',
+                'options': ['A-?', 'B-?', 'C-?', 'D-?'],
+                'answer_options': ['1', '2', '3', '4', '5'],
+                'correct_answer': 'A-1,B-2,C-3,D-4',
+                'delay': 7
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'matrix',
+                'question': 'Запомните расположение чисел в матрице',
+                'matrix': [
+                    [3, 7, 1],
+                    [9, 5, 8],
+                    [2, 6, 4]
+                ],
+                'question_text': 'Какое число было в центре?',
+                'options': ['3', '5', '7', '8', '9'],
+                'correct_answer': '5',
+                'delay': 6
             }
         ]
     elif test_type == 'reaction':
@@ -279,20 +355,126 @@ def generate_test_questions(test_type):
             {
                 'id': str(uuid.uuid4()),
                 'type': 'quick_choice',
-                'question': 'Кликните при появлении красного круга',
+                'question': 'Нажмите при появлении красного круга',
+                'stimulus': 'red_circle',
                 'correct_answer': 'click:<500',
                 'delay': 1.5
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'choice_reaction',
+                'question': 'Нажмите левую кнопку для зеленого круга, правую для красного',
+                'stimulus': ['green_circle', 'red_circle'],
+                'options': ['left', 'right'],
+                'correct_answer': 'green_circle:left,red_circle:right',
+                'delay': 1.2
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'go_nogo',
+                'question': 'Нажмите только при появлении буквы X, но не при Y',
+                'stimulus': ['X', 'Y'],
+                'correct_answer': 'X:click,Y:none',
+                'delay': 0.8
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'reaction_chain',
+                'question': 'Быстро нажимайте на появляющиеся числа по порядку: 1,2,3',
+                'stimulus': ['1', '2', '3'],
+                'correct_answer': 'sequence:1,2,3',
+                'delay': 1
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'multi_target',
+                'question': 'Нажмите на все красные объекты как можно быстрее',
+                'stimulus': ['red_square', 'red_circle', 'blue_square', 'green_circle', 'red_triangle'],
+                'correct_answer': 'red_square,red_circle,red_triangle',
+                'delay': 2
+            }
+        ]
+    elif test_type == 'cognitive':
+        return [
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'math',
+                'question': 'Решите пример: 18 + 7 * 3 - 5',
+                'options': ['34', '28', '33', '64'],
+                'correct_answer': '34'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'verbal',
+                'question': 'Какое слово лишнее?',
+                'options': ['Яблоко', 'Банан', 'Картофель', 'Апельсин'],
+                'correct_answer': 'Картофель'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'spatial',
+                'question': 'Как будет выглядеть фигура после поворота на 90° по часовой стрелке?',
+                'image': 'https://i.imgur.com/LqDF35P.png',
+                'options': [
+                    'https://i.imgur.com/9X5RTsP.png',
+                    'https://i.imgur.com/Z87nP3E.png',
+                    'https://i.imgur.com/D4R6QHw.png',
+                    'https://i.imgur.com/LCjuK9M.png'
+                ],
+                'correct_answer': 'https://i.imgur.com/Z87nP3E.png'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'logic',
+                'question': 'Все коты любят рыбу. Мурзик любит рыбу. Следовательно:',
+                'options': [
+                    'Мурзик - кот',
+                    'Мурзик не может быть котом',
+                    'Недостаточно данных для вывода',
+                    'Все животные, которые любят рыбу - коты'
+                ],
+                'correct_answer': 'Недостаточно данных для вывода'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'type': 'pattern',
+                'question': 'Найдите пропущенное число: 2, 6, 12, 20, ?',
+                'options': ['30', '24', '28', '32'],
+                'correct_answer': '30'
             }
         ]
     return []
 
 def calculate_results(questions, answers, test_type, time_elapsed):
+    """Рассчитывает результаты тестирования"""
     correct = 0
     mistakes = []
+    test_details = {}
     
     for q in questions:
-        user_answer = answers.get(q['id'])
-        if user_answer == q['correct_answer']:
+        user_answer = answers.get(q['id'], '')
+        if not user_answer:
+            user_answer = "не дан ответ"
+        
+        # Проверяем правильность ответа
+        is_correct = user_answer == q['correct_answer']
+        
+        # Сохраняем детальные результаты по каждому вопросу
+        question_result = {
+            'question_id': q['id'],
+            'question_type': q['type'],
+            'question_text': q['question'],
+            'user_answer': user_answer,
+            'correct_answer': q['correct_answer'],
+            'is_correct': is_correct
+        }
+        
+        # Добавляем в детали теста
+        if q['type'] not in test_details:
+            test_details[q['type']] = []
+        test_details[q['type']].append(question_result)
+        
+        if is_correct:
             correct += 1
         else:
             mistakes.append({
@@ -301,12 +483,25 @@ def calculate_results(questions, answers, test_type, time_elapsed):
                 'correct_answer': q['correct_answer']
             })
     
-    score = (correct / len(questions)) * 100
+    total_questions = len(questions)
+    score = (correct / total_questions) * 100 if total_questions > 0 else 0
+    
+    # Группируем анализ ошибок по типам
+    error_analysis = {}
+    for m in mistakes:
+        question_type = next((q['type'] for q in questions if q['question'] == m['question']), 'unknown')
+        if question_type not in error_analysis:
+            error_analysis[question_type] = 0
+        error_analysis[question_type] += 1
+    
     return {
         'score': round(score, 1),
-        'total_questions': len(questions),
+        'total_questions': total_questions,
         'correct_answers': correct,
-        'mistakes': mistakes
+        'mistakes': mistakes,
+        'time_elapsed': time_elapsed,
+        'test_details': test_details,
+        'error_analysis': error_analysis
     }
 
 def allowed_file(filename):
@@ -688,6 +883,10 @@ def get_analysis(current_user, analysis_id):
 def start_test(current_user):
     try:
         test_type = request.json.get('test_type')
+        if not test_type:
+            return jsonify({'error': 'Тип теста не указан'}), 400
+            
+        # Проверяем интервал между попытками
         conn = get_db_connection()
         last_test = conn.execute('''
             SELECT test_date 
@@ -698,20 +897,23 @@ def start_test(current_user):
             LIMIT 1
         ''', (current_user['employee_id'], test_type)).fetchone()
         
-        if last_test:
-            last_time = datetime.fromisoformat(last_test['test_date'])
-            if (datetime.now() - last_time).total_seconds() < 600:  # 10 минут
-                return jsonify({
-                    'error': 'Повторная попытка доступна через 10 минут',
-                    'retry_after': 600 - int((datetime.now() - last_time).total_seconds())
-                }), 429
+        # Можно снять ограничение интервала для удобства тестирования
+        # if last_test:
+        #     last_time = datetime.fromisoformat(last_test['test_date'])
+        #     if (datetime.now() - last_time).total_seconds() < 600:  # 10 минут
+        #         return jsonify({
+        #             'error': 'Повторная попытка доступна через 10 минут',
+        #             'retry_after': 600 - int((datetime.now() - last_time).total_seconds())
+        #         }), 429
+                
         if test_type not in ['attention', 'memory', 'reaction', 'cognitive']:
-            return jsonify({'error': 'Invalid test type'}), 400
+            return jsonify({'error': 'Недопустимый тип теста'}), 400
 
+        # Генерируем вопросы
         questions = generate_test_questions(test_type)
         test_id = str(uuid.uuid4())
         
-        conn = get_db_connection()
+        # Сохраняем сессию теста
         conn.execute('''
             INSERT INTO TestSessions 
             (session_id, employee_id, test_type, start_time, questions)
@@ -726,18 +928,29 @@ def start_test(current_user):
         conn.commit()
         conn.close()
 
+        # Возвращаем облегчённую версию вопросов (без правильных ответов)
         return jsonify({
             'test_id': test_id,
             'questions': [{
                 'id': q['id'],
                 'type': q['type'],
                 'question': q['question'],
-                'options': q.get('options', [])
+                'options': q.get('options', []),
+                'image': q.get('image', None),
+                'images': q.get('images', None),
+                'grid': q.get('grid', None),
+                'matrix': q.get('matrix', None),
+                'stimulus': q.get('stimulus', None),
+                'delay': q.get('delay', None),
+                'answer_options': q.get('answer_options', None),
+                'question_text': q.get('question_text', None)
             } for q in questions],
-            'time_limit': 300
+            'time_limit': 300  # 5 минут на весь тест
         })
 
     except Exception as e:
+        print(f"Error in start_test: {str(e)}")
+        app.logger.error(f"Start test error: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -747,18 +960,19 @@ def start_test(current_user):
 @token_required
 def submit_test(current_user):
     if not request.is_json:
-        return jsonify({'error': 'Request must be JSON'}), 400
+        return jsonify({'error': 'Запрос должен быть в формате JSON'}), 400
 
     data = request.get_json()
     required_fields = ['test_id', 'answers']
     
     if not all(field in data for field in required_fields):
-        return jsonify({'error': f'Missing fields: {required_fields}'}), 400
+        return jsonify({'error': f'Отсутствуют обязательные поля: {required_fields}'}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Получаем информацию о текущей сессии теста
         test_session = conn.execute('''
             SELECT * FROM TestSessions 
             WHERE session_id = ?
@@ -766,11 +980,13 @@ def submit_test(current_user):
         ''', (data['test_id'], current_user['employee_id'])).fetchone()
 
         if not test_session:
-            return jsonify({'error': 'Invalid test session'}), 404
+            return jsonify({'error': 'Недействительная сессия теста'}), 404
 
+        # Рассчитываем время выполнения
         start_time = datetime.fromisoformat(test_session['start_time'])
         time_elapsed = (datetime.now() - start_time).total_seconds()
 
+        # Рассчитываем результаты
         questions = json.loads(test_session['questions'])
         results = calculate_results(
             questions,
@@ -779,6 +995,7 @@ def submit_test(current_user):
             time_elapsed
         )
 
+        # Сохраняем результаты в базу данных
         cursor.execute('''
             INSERT INTO CognitiveTests 
             (employee_id, test_date, test_type, score, duration, details)
@@ -791,37 +1008,52 @@ def submit_test(current_user):
             time_elapsed,
             json.dumps({
                 'total_questions': results['total_questions'],
-                'correct_answers': results['correct_answers']
+                'correct_answers': results['correct_answers'],
+                'error_analysis': results['error_analysis']
             })
         ))
 
         test_id = cursor.lastrowid
 
+        # Сохраняем ошибки
         if results['mistakes']:
+            mistakes_data = []
+            for m in results['mistakes']:
+                mistakes_data.append((
+                    test_id, 
+                    m['question'], 
+                    m['user_answer'], 
+                    m['correct_answer']
+                ))
+            
             cursor.executemany('''
                 INSERT INTO TestMistakes 
                 (test_id, question, user_answer, correct_answer)
                 VALUES (?, ?, ?, ?)
-            ''', [
-                (test_id, m['question'], m['user_answer'], m['correct_answer'])
-                for m in results['mistakes']
-            ])
+            ''', mistakes_data)
 
+        # Удаляем сессию теста
         conn.execute('DELETE FROM TestSessions WHERE session_id = ?', 
                    (data['test_id'],))
         
         conn.commit()
+        
+        # Возвращаем краткие результаты
         return jsonify({
             'score': results['score'],
-            'test_id': test_id
+            'test_id': test_id,
+            'total_questions': results['total_questions'],
+            'correct_answers': results['correct_answers']
         })
 
     except sqlite3.Error as e:
         conn.rollback()
-        return jsonify({'error': f'Database error: {str(e)}'}), 500
+        app.logger.error(f"Database error: {traceback.format_exc()}")
+        return jsonify({'error': f'Ошибка базы данных: {str(e)}'}), 500
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': f'Internal error: {str(e)}'}), 500
+        app.logger.error(f"Submit test error: {traceback.format_exc()}")
+        return jsonify({'error': f'Внутренняя ошибка: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -838,7 +1070,7 @@ def get_test_results(current_user, test_id):
         ''', (test_id, current_user['employee_id'])).fetchone()
 
         if not test:
-            return jsonify({'error': 'Test not found'}), 404
+            return jsonify({'error': 'Тест не найден'}), 404
 
         # Ошибки теста
         mistakes = conn.execute('''
@@ -847,17 +1079,21 @@ def get_test_results(current_user, test_id):
             WHERE test_id = ?
         ''', (test_id,)).fetchall()
 
+        # Преобразуем результаты в структурированные данные
+        test_details = json.loads(test['details']) if test['details'] else {}
+        
         return jsonify({
             'test_id': test['test_id'],
             'test_date': test['test_date'],
             'test_type': test['test_type'],
             'score': test['score'],
             'duration': test['duration'],
-            'details': json.loads(test['details']),
+            'details': test_details,
             'mistakes': [dict(m) for m in mistakes]
         })
 
     except Exception as e:
+        app.logger.error(f"Get test results error: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
