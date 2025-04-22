@@ -63,14 +63,7 @@ export const cognitiveTestsApi = {
   
   // Проверить статус перезарядки теста
   checkTestCooldown: async (testType: string): Promise<{ in_cooldown: boolean, cooldown_end?: string }> => {
-    try {
-      // Используем правильный эндпоинт для проверки перезарядки теста
-      const response = await apiClient.get(`/tests/cooldown/${testType}`);
-      return response.data;
-    } catch (error) {
-      console.error('Ошибка при проверке перезарядки теста:', error);
-      // В случае ошибки возвращаем, что тест не в перезарядке
-      return { in_cooldown: false };
-    }
+    const response = await apiClient.get(`/tests/cooldown/${testType}`);
+    return response.data;
   }
 };

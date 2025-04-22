@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
   const [startTime, setStartTime] = useState<number | null>(null);
 
   useEffect(() => {
+    // Сбрасываем состояние при смене вопроса
     setAnswer('');
     setSelectedItems([]);
     setShowOptions(true);
@@ -35,10 +37,12 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
     setCurrentStimulus(null);
     setStartTime(null);
     
+    // Обрабатываем задержку, если она указана
     if (question.delay && question.delay > 0) {
       if (question.type === 'sequence' || question.type === 'words' || 
           question.type === 'images' || question.type === 'pairs' || 
           question.type === 'matrix' || question.type === 'grid') {
+        // Вопросы на память: показываем, затем скрываем
         setShowOptions(true);
         setCountdown(Math.round(question.delay));
         
@@ -58,10 +62,11 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
       else if (question.type.includes('reaction') || question.type === 'quick_choice' || 
                question.type === 'go_nogo' || question.type === 'choice_reaction' || 
                question.type === 'reaction_chain' || question.type === 'multi_target') {
+        // Вопросы на реакцию: скрываем, затем показываем
         setShowOptions(false);
         
         const delayMs = question.delay * 1000;
-        const randomDelay = delayMs + Math.random() * 500;
+        const randomDelay = delayMs + Math.random() * 500; // Добавляем случайность
         
         const timer = setTimeout(() => {
           setShowStimulus(true);
@@ -116,7 +121,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
   const handleSubmitAnswer = () => {
     if (question.type === 'select' || question.type === 'words' || 
         question.type === 'images' || question.type === 'pairs' || 
-        question.type === 'multi_target' || question.multiple_select) {
+        question.type === 'multi_target') {
       onAnswer(question.id, selectedItems.join(','));
     } else {
       onAnswer(question.id, answer);
@@ -126,6 +131,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
+      case 'select':
       case 'pattern':
       case 'math':
       case 'verbal':
@@ -169,78 +175,6 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                 ))}
               </AnimatePresence>
             </RadioGroup>
-          </div>
-        );
-        
-      case 'select':
-        return (
-          <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {question.image && (
-              <div className="flex justify-center my-4">
-                <motion.img 
-                  src={question.image} 
-                  alt="Вопрос" 
-                  className="max-w-full max-h-64 rounded-md shadow-md" 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
-            )}
-            
-            {question.multiple_select ? (
-              <div className="space-y-2">
-                <p className="font-medium">Выберите все подходящие варианты:</p>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Checkbox 
-                        id={`check-${index}`} 
-                        checked={selectedItems.includes(option)}
-                        onCheckedChange={() => handleMultipleOptionSelect(option)}
-                        disabled={disabled}
-                      />
-                      <label htmlFor={`check-${index}`} className="text-sm font-medium cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                          option
-                        }
-                      </label>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
-                      <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                          option
-                        }
-                      </Label>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </RadioGroup>
-            )}
           </div>
         );
         
@@ -723,61 +657,32 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
         return (
           <div className="space-y-4">
             <CardDescription>{question.question}</CardDescription>
-            
-            {question.multiple_select ? (
-              <div className="space-y-2">
-                <p className="font-medium">Выберите все подходящие варианты:</p>
+            {question.options && (
+              <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
                 <AnimatePresence>
-                  {question.options?.map((option, index) => (
+                  {question.options.map((option, index) => (
                     <motion.div 
                       key={index} 
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
+                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
-                      <Checkbox 
-                        id={`check-${index}`} 
-                        checked={selectedItems.includes(option)}
-                        onCheckedChange={() => handleMultipleOptionSelect(option)}
-                        disabled={disabled}
-                      />
-                      <label htmlFor={`check-${index}`} className="text-sm font-medium cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                          option
-                        }
-                      </label>
+                      <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
+                      <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">{option}</Label>
                     </motion.div>
                   ))}
                 </AnimatePresence>
-              </div>
-            ) : (
-              question.options && (
-                <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-                  <AnimatePresence>
-                    {question.options.map((option, index) => (
-                      <motion.div 
-                        key={index} 
-                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                      >
-                        <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
-                        <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">{option}</Label>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </RadioGroup>
-              )
+              </RadioGroup>
             )}
           </div>
         );
     }
   };
   
+  // Определяем, нужно ли показывать кнопку "Ответить"
   const showSubmitButton = () => {
+    // Для реакционных тестов кнопка не нужна
     if (question.type.includes('reaction') || 
         question.type === 'quick_choice' || 
         question.type === 'go_nogo' || 
@@ -785,6 +690,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
       return false;
     }
     
+    // Для тестов на память не показываем кнопку во время отображения элементов
     if ((question.type === 'sequence' || 
          question.type === 'words' || 
          question.type === 'images' || 
