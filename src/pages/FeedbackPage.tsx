@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,17 +21,27 @@ const FeedbackPage = () => {
   const { feedbackHistory, isLoading, submitFeedback } = useFeedback();
   const { data: flights = [], isLoading: flightsLoading } = useFlights();
 
-  // Check if feedback already exists for this flight
   const hasExistingFeedback = (flightId: number) => {
     return feedbackHistory.some(feedback => 
       feedback.entityId === flightId && feedback.type === 'flight'
     );
   };
 
-  // Используем первый доступный рейс по умолчанию
+  const isInCurrentWeek = (date: Date) => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); // Monday
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // Sunday
+    end.setHours(23, 59, 59, 999);
+    
+    return date >= start && date <= end;
+  };
+
   useEffect(() => {
     if (flights?.length > 0 && !selectedFlightId) {
-      // Find first flight without feedback
       const availableFlight = flights.find(flight => !hasExistingFeedback(flight.flight_id));
       setSelectedFlightId(availableFlight ? availableFlight.flight_id : flights[0].flight_id);
     }
@@ -43,8 +52,31 @@ const FeedbackPage = () => {
     ? `${currentFlight.from_code} - ${currentFlight.to_code}`
     : "Загрузка...";
   
-  // Check if the currently selected flight already has feedback
   const currentFlightHasFeedback = selectedFlightId ? hasExistingFeedback(selectedFlightId) : false;
+
+  useEffect(() => {
+    if (!flights?.length || !submitFeedback) return;
+
+    const now = new Date();
+    const pastFlights = flights.filter(flight => {
+      const arrivalDate = new Date(flight.arrival_time);
+      return arrivalDate < now && !hasExistingFeedback(flight.flight_id) && !isInCurrentWeek(arrivalDate);
+    });
+
+    pastFlights.forEach(flight => {
+      submitFeedback({
+        entityType: "flight",
+        entityId: flight.flight_id,
+        rating: 5,
+        comments: ""
+      });
+    });
+  }, [flights]);
+
+  const availableFlights = flights?.filter(flight => {
+    const arrivalDate = new Date(flight.arrival_time);
+    return isInCurrentWeek(arrivalDate);
+  }) || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,15 +129,21 @@ const FeedbackPage = () => {
                       <SelectValue placeholder="Выберите рейс" />
                     </SelectTrigger>
                     <SelectContent>
-                      {flights.map((flight) => (
-                        <SelectItem 
-                          key={flight.flight_id} 
-                          value={flight.flight_id.toString()}
-                          disabled={hasExistingFeedback(flight.flight_id)}
-                        >
-                          {flight.from_code} - {flight.to_code} {hasExistingFeedback(flight.flight_id) ? "(отзыв отправлен)" : ""}
-                        </SelectItem>
-                      ))}
+                      {availableFlights.map((flight) => {
+                        const arrivalDate = new Date(flight.arrival_time);
+                        const hasReview = hasExistingFeedback(flight.flight_id);
+                        
+                        return (
+                          <SelectItem 
+                            key={flight.flight_id} 
+                            value={flight.flight_id.toString()}
+                            disabled={hasReview}
+                          >
+                            {flight.from_code} - {flight.to_code} ({format(arrivalDate, "dd.MM.yyyy HH:mm")})
+                            {hasReview ? " (отзыв отправлен)" : ""}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 ) : (

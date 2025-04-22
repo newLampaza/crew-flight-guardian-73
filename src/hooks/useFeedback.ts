@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Feedback, FeedbackSubmission } from "@/types/feedback";
@@ -70,20 +71,26 @@ export function useFeedback() {
       console.log("Feedback submitted successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["feedback"] });
       
-      toast({
-        title: "Отзыв отправлен",
-        description: "Спасибо за ваш отзыв!"
-      });
+      // Only show toast for manual submissions (with comments)
+      if (data.comments) {
+        toast({
+          title: "Отзыв отправлен",
+          description: "Спасибо за ваш отзыв!"
+        });
+      }
     },
     onError: (error: any) => {
       console.error("Error submitting feedback:", error);
       
       if (error.response?.status === 409) {
-        toast({
-          title: "Отзыв уже существует",
-          description: "Вы уже оставили отзыв для этого объекта",
-          variant: "default"
-        });
+        // Don't show toast for automatic submissions
+        if (error.config?.data && JSON.parse(error.config.data).comments !== "") {
+          toast({
+            title: "Отзыв уже существует",
+            description: "Вы уже оставили отзыв для этого объекта",
+            variant: "default"
+          });
+        }
       } else {
         toast({
           title: "Ошибка отправки",
