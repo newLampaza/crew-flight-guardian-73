@@ -6,22 +6,49 @@ import { TestHistory, TestSession, TestResult, TestResultSummary } from '../type
 // In production, the API_URL should be just '/api'
 const API_URL = import.meta.env.DEV ? 'http://localhost:5000/api' : '/api';
 
+// Создаем экземпляр axios с базовыми настройками
+const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Добавляем перехватчик запросов для добавления токена авторизации
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('fatigue-guard-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export const cognitiveTestsApi = {
   // Получить историю тестов
   getTestHistory: async (): Promise<TestHistory[]> => {
-    const response = await axios.get(`${API_URL}/cognitive-tests`);
-    return response.data;
+    try {
+      const response = await apiClient.get('/cognitive-tests');
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch test history:', error);
+      throw error;
+    }
   },
 
   // Начать новый тест
   startTest: async (testType: string): Promise<TestSession> => {
-    const response = await axios.post(`${API_URL}/tests/start`, { test_type: testType });
+    const response = await apiClient.post('/tests/start', { test_type: testType });
     return response.data;
   },
 
   // Отправить результаты теста
   submitTest: async (testId: string, answers: Record<string, string>): Promise<TestResultSummary> => {
-    const response = await axios.post(`${API_URL}/tests/submit`, {
+    const response = await apiClient.post('/tests/submit', {
       test_id: testId,
       answers: answers
     });
@@ -30,7 +57,7 @@ export const cognitiveTestsApi = {
 
   // Получить детальные результаты теста
   getTestResults: async (testId: number): Promise<TestResult> => {
-    const response = await axios.get(`${API_URL}/tests/results/${testId}`);
+    const response = await apiClient.get(`/tests/results/${testId}`);
     return response.data;
   }
 };

@@ -3,28 +3,46 @@ import { useState, useEffect } from "react";
 import { TestHistory, TestResult } from "@/types/cognitivetests";
 import { cognitiveTestsApi } from "@/api/cognitiveTestsApi";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 export const useTestHistory = () => {
   const [testHistory, setTestHistory] = useState<TestHistory[]>([]);
   const [showResultDetails, setShowResultDetails] = useState(false);
   const [selectedTestResults, setSelectedTestResults] = useState<TestResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    fetchTestHistory();
-  }, []);
+    if (isAuthenticated) {
+      fetchTestHistory();
+    }
+  }, [isAuthenticated]);
 
   const fetchTestHistory = async () => {
+    if (!isAuthenticated) {
+      setTestHistory([]);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const history = await cognitiveTestsApi.getTestHistory();
       setTestHistory(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error("Failed to fetch test history:", error);
+      
+      // Более информативное сообщение об ошибке
+      let errorMessage = "Не удалось загрузить историю тестов";
+      if (error.response?.status === 401) {
+        errorMessage = "Ошибка авторизации. Пожалуйста, войдите в систему снова";
+      }
+      
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить историю тестов",
+        description: errorMessage,
         variant: "destructive"
       });
+      
       setTestHistory([]);
     } finally {
       setIsLoading(false);

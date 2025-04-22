@@ -3,6 +3,7 @@ import { useState } from "react";
 import { TestHistory, TestQuestion, TestResult, TestResultSummary } from "@/types/cognitivetests";
 import { cognitiveTestsApi } from "@/api/cognitiveTestsApi";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 export const useCognitiveTest = () => {
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
@@ -17,9 +18,20 @@ export const useCognitiveTest = () => {
   } | null>(null);
   const [testResults, setTestResults] = useState<TestResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, user } = useAuth();
 
   const startTest = async (testId: string) => {
     try {
+      // Проверяем, аутентифицирован ли пользователь
+      if (!isAuthenticated || !user) {
+        toast({
+          title: "Ошибка авторизации",
+          description: "Пожалуйста, войдите в систему снова",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsLoading(true);
       setActiveTestId(testId);
       
@@ -38,11 +50,21 @@ export const useCognitiveTest = () => {
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to start test:", error);
+      
+      // Более информативное сообщение об ошибке
+      let errorMessage = "Не удалось начать тест";
+      if (error.response?.status === 401) {
+        errorMessage = "Ошибка авторизации. Пожалуйста, войдите в систему снова";
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
       toast({
         title: "Ошибка",
-        description: "Не удалось начать тест",
+        description: errorMessage,
         variant: "destructive"
       });
+      
       setActiveTestId(null);
       setIsLoading(false);
     }

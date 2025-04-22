@@ -7,6 +7,9 @@ import { ResultsDialog } from "@/components/cognitive-tests/ResultsDialog";
 import { useCognitiveTest } from "@/hooks/useCognitiveTest";
 import { useTestHistory } from "@/hooks/useTestHistory";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Конфигурация доступных тестов
 const testConfig = [
@@ -42,6 +45,14 @@ const testConfig = [
 
 const CognitiveTestsPage = () => {
   const isMobile = useIsMobile();
+  const { isAuthenticated, refreshToken } = useAuth();
+  
+  useEffect(() => {
+    // Обновляем токен при входе на страницу
+    if (isAuthenticated) {
+      refreshToken().catch(console.error);
+    }
+  }, [isAuthenticated, refreshToken]);
   
   const {
     activeTestId,
@@ -79,6 +90,45 @@ const CognitiveTestsPage = () => {
     setTimeout(() => startTest(testId), 300);
   };
 
+  const renderTestCards = (mode?: 'compact') => {
+    if (historyLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="p-4 border rounded-lg space-y-2">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <div className="flex justify-between items-center pt-2">
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {testConfig.map((test) => (
+          <TestCard
+            key={test.id}
+            id={test.id}
+            name={test.name}
+            description={test.description}
+            duration={test.duration}
+            lastResult={getLastResult(test.id)}
+            icon={test.icon}
+            onStartTest={startTest}
+            onViewResults={viewTestDetails}
+            mode={mode}
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-3xl font-bold tracking-tight">Когнитивные тесты</h1>
@@ -90,38 +140,11 @@ const CognitiveTestsPage = () => {
         </TabsList>
         
         <TabsContent value="available" className="space-y-4 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {testConfig.map((test) => (
-              <TestCard
-                key={test.id}
-                id={test.id}
-                name={test.name}
-                description={test.description}
-                duration={test.duration}
-                lastResult={getLastResult(test.id)}
-                icon={test.icon}
-                onStartTest={startTest}
-                onViewResults={viewTestDetails}
-              />
-            ))}
-          </div>
+          {renderTestCards()}
         </TabsContent>
         
         <TabsContent value="results" className="space-y-4 animate-fade-in">
-          {testConfig.map((test) => (
-            <TestCard
-              key={test.id}
-              id={test.id}
-              name={test.name}
-              description={test.description}
-              duration={test.duration}
-              lastResult={getLastResult(test.id)}
-              icon={test.icon}
-              onStartTest={startTest}
-              onViewResults={viewTestDetails}
-              mode="compact"
-            />
-          ))}
+          {renderTestCards('compact')}
         </TabsContent>
       </Tabs>
       
