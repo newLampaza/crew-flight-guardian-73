@@ -169,7 +169,9 @@ function toastFunction(options: ToastOptions) {
     type: actionTypes.ADD_TOAST,
     toast: {
       ...options,
+      id,
       open: true,
+      duration: options.duration || TOAST_REMOVE_DELAY,
       onOpenChange: (open) => {
         if (!open) dismiss()
         if (options.onOpenChange) options.onOpenChange(open)
