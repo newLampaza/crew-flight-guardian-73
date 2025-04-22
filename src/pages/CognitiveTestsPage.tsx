@@ -1,176 +1,256 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { Brain, CheckCircle, XCircle, Clock, BarChart, ActivitySquare, MousePointer } from "lucide-react";
+import { Brain, ActivitySquare, MousePointer, BarChart } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TestCard } from "@/components/cognitive-tests/TestCard";
+import { TestProgress } from "@/components/cognitive-tests/TestProgress";
+import { TestQuestion } from "@/components/cognitive-tests/TestQuestion";
+import { TestResults } from "@/components/cognitive-tests/TestResults";
+import { cognitiveTestsApi } from "@/api/cognitiveTestsApi";
+import { TestHistory, TestQuestion as TestQuestionType, TestResult } from "@/types/cognitivetests";
 
-// Тестовые данные
-const availableTests = [
+// Конфигурация доступных тестов
+const testConfig = [
   {
     id: "attention",
     name: "Тест внимания",
     description: "Проверка способности концентрироваться и распределять внимание",
     duration: "3 минуты",
-    icon: <Brain className="h-5 w-5" />,
-    lastResult: {
-      status: "passed",
-      score: 92,
-      date: "12.04.2025",
-      errors: []
-    }
+    icon: <Brain className="h-5 w-5" />
   },
   {
     id: "reaction",
     name: "Тест реакции",
     description: "Измерение скорости реакции на визуальные стимулы",
     duration: "2 минуты",
-    icon: <MousePointer className="h-5 w-5" />,
-    lastResult: {
-      status: "passed",
-      score: 95,
-      date: "12.04.2025",
-      errors: []
-    }
+    icon: <MousePointer className="h-5 w-5" />
   },
   {
     id: "memory",
     name: "Тест памяти",
     description: "Проверка кратковременной памяти и способности к запоминанию",
     duration: "4 минуты",
-    icon: <ActivitySquare className="h-5 w-5" />,
-    lastResult: {
-      status: "warning",
-      score: 75,
-      date: "10.04.2025",
-      errors: [
-        "Ошибка при запоминании последовательности цифр",
-        "Низкая скорость воспроизведения образов"
-      ]
-    }
-  },
-  {
-    id: "cognitive",
-    name: "Тест когнитивной гибкости",
-    description: "Оценка способности к переключению между задачами",
-    duration: "5 минут",
-    icon: <BarChart className="h-5 w-5" />,
-    lastResult: {
-      status: "failed",
-      score: 60,
-      date: "09.04.2025",
-      errors: [
-        "Высокое время переключения между задачами",
-        "Ошибки при смене правил",
-        "Низкая скорость адаптации к новым условиям"
-      ]
-    }
+    icon: <ActivitySquare className="h-5 w-5" />
   }
 ];
 
 // Компонент страницы когнитивных тестов
 const CognitiveTestsPage = () => {
-  const [activeTest, setActiveTest] = useState<string | null>(null);
+  const [activeTestId, setActiveTestId] = useState<string | null>(null);
   const [testInProgress, setTestInProgress] = useState(false);
   const [testComplete, setTestComplete] = useState(false);
-  const [currentProgress, setCurrentProgress] = useState(0);
-  const [testResult, setTestResult] = useState<any>(null);
+  const [currentTestSession, setCurrentTestSession] = useState<{
+    testId: string;
+    questions: TestQuestionType[];
+    timeLimit: number;
+    currentQuestion: number;
+    answers: Record<string, string>;
+  } | null>(null);
+  const [testResults, setTestResults] = useState<TestResult | null>(null);
   const [showResultDetails, setShowResultDetails] = useState(false);
+  const [testHistory, setTestHistory] = useState<TestHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const isMobile = useIsMobile();
   
-  // Начать тест
-  const startTest = (testId: string) => {
-    setActiveTest(testId);
-    setTestInProgress(true);
-    setCurrentProgress(0);
-    setTestComplete(false);
+  // Загрузка истории тестов при монтировании
+  useEffect(() => {
+    const fetchTestHistory = async () => {
+      try {
+        const history = await cognitiveTestsApi.getTestHistory();
+        setTestHistory(history);
+      } catch (error) {
+        console.error("Failed to fetch test history:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить историю тестов",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Имитация прогресса теста
-    const intervalId = setInterval(() => {
-      setCurrentProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(intervalId);
-          completeTest();
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 200);
+    fetchTestHistory();
+  }, []);
+  
+  // Получить последний результат теста из истории
+  const getLastResult = (testType: string) => {
+    const results = testHistory.filter(test => test.test_type === testType);
+    if (results.length === 0) return null;
+    
+    results.sort((a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime());
+    const lastTest = results[0];
+    
+    // Определение статуса на основе оценки
+    let status = "failed";
+    if (lastTest.score >= 85) status = "passed";
+    else if (lastTest.score >= 70) status = "warning";
+    
+    return {
+      status,
+      score: lastTest.score,
+      date: new Date(lastTest.test_date).toLocaleDateString('ru-RU'),
+      errors: []
+    };
   };
   
-  // Завершение теста
-  const completeTest = () => {
-    setTestInProgress(false);
-    setTestComplete(true);
+  // Начать тест
+  const startTest = async (testId: string) => {
+    try {
+      setIsLoading(true);
+      setActiveTestId(testId);
+      
+      const session = await cognitiveTestsApi.startTest(testId);
+      
+      setCurrentTestSession({
+        testId: session.test_id,
+        questions: session.questions,
+        timeLimit: session.time_limit,
+        currentQuestion: 0,
+        answers: {}
+      });
+      
+      setTestInProgress(true);
+      setTestComplete(false);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Failed to start test:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось начать тест",
+        variant: "destructive"
+      });
+      setActiveTestId(null);
+      setIsLoading(false);
+    }
+  };
+  
+  // Обработка ответа на вопрос
+  const handleAnswer = (questionId: string, answer: string) => {
+    if (!currentTestSession) return;
     
-    // Имитация результата теста
-    const test = availableTests.find(t => t.id === activeTest);
-    if (test && test.lastResult) {
-      setTestResult({
-        ...test.lastResult,
-        date: new Date().toLocaleDateString('ru-RU')
+    const updatedAnswers = {
+      ...currentTestSession.answers,
+      [questionId]: answer
+    };
+    
+    const nextQuestion = currentTestSession.currentQuestion + 1;
+    
+    // Если это последний вопрос, завершаем тест
+    if (nextQuestion >= currentTestSession.questions.length) {
+      submitTest(currentTestSession.testId, updatedAnswers);
+    } else {
+      // Переходим к следующему вопросу
+      setCurrentTestSession({
+        ...currentTestSession,
+        currentQuestion: nextQuestion,
+        answers: updatedAnswers
       });
     }
+  };
+  
+  // Отправка результатов теста
+  const submitTest = async (testId: string, answers: Record<string, string>) => {
+    try {
+      setIsLoading(true);
+      
+      const result = await cognitiveTestsApi.submitTest(testId, answers);
+      
+      // Получение полных результатов теста
+      const fullResults = await cognitiveTestsApi.getTestResults(result.test_id);
+      
+      setTestResults(fullResults);
+      setTestInProgress(false);
+      setTestComplete(true);
+      
+      // Обновление истории тестов
+      const updatedHistory = await cognitiveTestsApi.getTestHistory();
+      setTestHistory(updatedHistory);
+      
+      toast({
+        title: "Тест завершен",
+        description: `Ваш результат: ${result.score}%`,
+      });
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Failed to submit test:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отправить результаты теста",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+  };
+  
+  // Завершение по истечению времени
+  const handleTimeUp = () => {
+    if (!currentTestSession) return;
     
     toast({
-      title: "Тест завершен",
-      description: "Результаты теста готовы к просмотру",
+      title: "Время истекло",
+      description: "Тест будет автоматически завершен",
     });
+    
+    submitTest(currentTestSession.testId, currentTestSession.answers);
   };
   
   // Закрыть тест
   const closeTest = () => {
-    setActiveTest(null);
+    setActiveTestId(null);
     setTestInProgress(false);
     setTestComplete(false);
-    setCurrentProgress(0);
+    setCurrentTestSession(null);
+    setTestResults(null);
   };
   
   // Посмотреть детали результата
-  const viewTestDetails = (testId: string) => {
-    const test = availableTests.find(t => t.id === testId);
-    if (test && test.lastResult) {
-      setTestResult(test.lastResult);
+  const viewTestDetails = async (testId: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Найти последний тест данного типа
+      const tests = testHistory.filter(test => test.test_type === testId);
+      if (tests.length === 0) {
+        toast({
+          title: "Информация",
+          description: "У вас еще нет результатов для этого теста",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Сортировка по дате (от новых к старым)
+      tests.sort((a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime());
+      const lastTestId = tests[0].test_id;
+      
+      // Получение детальных результатов
+      const result = await cognitiveTestsApi.getTestResults(lastTestId);
+      setTestResults(result);
       setShowResultDetails(true);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Failed to get test results:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить результаты теста",
+        variant: "destructive"
+      });
+      setIsLoading(false);
     }
   };
   
-  // Получить цвет статуса
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "passed": return "text-status-good";
-      case "warning": return "text-status-warning";
-      case "failed": return "text-status-danger";
-      default: return "text-gray-500";
-    }
-  };
-  
-  // Получить текст статуса
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "passed": return "Пройден";
-      case "warning": return "Требуется повторный тест";
-      case "failed": return "Не пройден";
-      default: return "Нет данных";
-    }
-  };
-  
-  // Получить иконку статуса
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "passed": return <CheckCircle className="h-5 w-5 text-status-good" />;
-      case "warning": return <Clock className="h-5 w-5 text-status-warning" />;
-      case "failed": return <XCircle className="h-5 w-5 text-status-danger" />;
-      default: return null;
-    }
-  };
+  // Текущий вопрос
+  const currentQuestion = currentTestSession 
+    ? currentTestSession.questions[currentTestSession.currentQuestion]
+    : null;
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -184,184 +264,115 @@ const CognitiveTestsPage = () => {
         
         <TabsContent value="available" className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {availableTests.map((test) => (
-              <Card key={test.id} className="hover-card transition-all duration-300">
-                <CardHeader>
-                  <div className="flex items-start gap-2">
-                    <div className="mt-1 p-2 rounded-full bg-primary/10">
-                      {test.icon}
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{test.name}</CardTitle>
-                      <CardDescription>{test.description}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Длительность:</span>
-                    <Badge variant="outline" className="font-medium">
-                      <Clock className="h-3 w-3 mr-1" /> {test.duration}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Последний результат:</span>
-                    <div className="flex items-center">
-                      {getStatusIcon(test.lastResult.status)}
-                      <span className={`ml-1 text-sm ${getStatusColor(test.lastResult.status)}`}>
-                        {getStatusText(test.lastResult.status)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between gap-2 flex-wrap">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => viewTestDetails(test.id)}
-                  >
-                    Результаты
-                  </Button>
-                  <Button 
-                    onClick={() => startTest(test.id)}
-                    size="sm"
-                  >
-                    Начать тест
-                  </Button>
-                </CardFooter>
-              </Card>
+            {testConfig.map((test) => (
+              <TestCard
+                key={test.id}
+                id={test.id}
+                name={test.name}
+                description={test.description}
+                duration={test.duration}
+                lastResult={getLastResult(test.id)}
+                icon={test.icon}
+                onStartTest={startTest}
+                onViewResults={viewTestDetails}
+              />
             ))}
           </div>
         </TabsContent>
         
         <TabsContent value="results" className="space-y-4 animate-fade-in">
-          {availableTests.map((test) => (
-            <Card key={test.id} className="hover-card transition-all duration-300">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {test.icon}
-                    {test.name}
-                  </CardTitle>
-                  <Badge 
-                    variant={
-                      test.lastResult.status === "passed" ? "outline" : 
-                      test.lastResult.status === "warning" ? "secondary" : 
-                      "destructive"
-                    }
-                  >
-                    {getStatusText(test.lastResult.status)}
-                  </Badge>
-                </div>
-                <CardDescription className="flex items-center mt-1">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Последнее прохождение: {test.lastResult.date}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 pb-2">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium">Результат:</span>
-                    <span className="font-bold">{test.lastResult.score}%</span>
-                  </div>
-                  <Progress value={test.lastResult.score} className="h-2" />
-                </div>
-                
-                {test.lastResult.errors && test.lastResult.errors.length > 0 && (
-                  <Alert variant={test.lastResult.status === "warning" ? "warning" : "destructive"}>
-                    <AlertTitle>Обнаружены ошибки</AlertTitle>
-                    <AlertDescription>
-                      <ul className="list-disc list-inside text-sm mt-2">
-                        {test.lastResult.errors.map((error: string, index: number) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  onClick={() => startTest(test.id)}
-                  className="w-full transition-all duration-300 hover:scale-[1.02]"
-                >
-                  Пройти повторно
-                </Button>
-              </CardFooter>
-            </Card>
+          {testConfig.map((test) => (
+            <TestCard
+              key={test.id}
+              id={test.id}
+              name={test.name}
+              description={test.description}
+              duration={test.duration}
+              lastResult={getLastResult(test.id)}
+              icon={test.icon}
+              onStartTest={startTest}
+              onViewResults={viewTestDetails}
+              mode="compact"
+            />
           ))}
         </TabsContent>
       </Tabs>
       
       {/* Модальное окно активного теста */}
-      <Dialog open={activeTest !== null} onOpenChange={(open) => !open && closeTest()}>
+      <Dialog open={activeTestId !== null} onOpenChange={(open) => !open && closeTest()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {availableTests.find(t => t.id === activeTest)?.name}
+              {testConfig.find(t => t.id === activeTestId)?.name}
             </DialogTitle>
             <DialogDescription>
-              {testInProgress ? "Выполнение теста..." : testComplete ? "Тест завершен" : "Готовы начать тест?"}
+              {testInProgress 
+                ? "Выполнение теста..." 
+                : testComplete 
+                  ? "Тест завершен" 
+                  : "Готовы начать тест?"}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            {testInProgress && (
+            {testInProgress && currentTestSession && (
               <div className="space-y-4">
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Прогресс:</span>
-                  <span>{currentProgress}%</span>
-                </div>
-                <Progress value={currentProgress} className="h-2" />
+                <TestProgress 
+                  timeLimit={currentTestSession.timeLimit}
+                  onTimeUp={handleTimeUp}
+                />
                 
-                <div className="bg-muted rounded-md p-4 text-center">
-                  <p className="text-sm text-muted-foreground">Здесь будет отображаться содержимое теста...</p>
-                </div>
+                {currentQuestion && (
+                  <TestQuestion
+                    question={currentQuestion}
+                    onAnswer={handleAnswer}
+                    disabled={isLoading}
+                  />
+                )}
               </div>
             )}
             
-            {testComplete && testResult && (
-              <div className="space-y-4">
-                <div className="bg-muted rounded-md p-6 text-center">
-                  <div className="text-5xl font-bold mb-2 text-primary">{testResult.score}%</div>
-                  <div className="flex items-center justify-center">
-                    {getStatusIcon(testResult.status)}
-                    <span className={`ml-1 ${getStatusColor(testResult.status)}`}>
-                      {getStatusText(testResult.status)}
-                    </span>
-                  </div>
-                </div>
-                
-                {testResult.errors && testResult.errors.length > 0 && (
-                  <Alert variant={testResult.status === "warning" ? "warning" : "destructive"}>
-                    <AlertTitle>Обнаружены ошибки</AlertTitle>
-                    <AlertDescription>
-                      <ul className="list-disc list-inside text-sm mt-2">
-                        {testResult.errors.map((error: string, index: number) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
+            {testComplete && testResults && (
+              <TestResults
+                result={testResults}
+                onClose={closeTest}
+              />
+            )}
+            
+            {!testInProgress && !testComplete && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>О тесте</CardTitle>
+                  <CardDescription>
+                    {testConfig.find(t => t.id === activeTestId)?.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Приготовьтесь к прохождению теста. Во время теста будьте внимательны и сосредоточены.
+                    Рекомендуется находиться в тихом помещении без отвлекающих факторов.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
           
           <DialogFooter>
             {!testInProgress && !testComplete && (
               <>
-                <Button variant="outline" onClick={closeTest}>Отмена</Button>
-                <Button onClick={() => startTest(activeTest!)}>Начать тест</Button>
+                <Button variant="outline" onClick={closeTest} disabled={isLoading}>Отмена</Button>
+                <Button onClick={() => startTest(activeTestId!)} disabled={isLoading}>
+                  {isLoading ? "Загрузка..." : "Начать тест"}
+                </Button>
               </>
             )}
             
             {testInProgress && (
-              <Button variant="outline" onClick={closeTest}>Отменить тест</Button>
+              <Button variant="outline" onClick={closeTest} disabled={isLoading}>Отменить тест</Button>
             )}
             
-            {testComplete && (
-              <Button onClick={closeTest}>Закрыть</Button>
+            {testComplete && !testResults && (
+              <Button onClick={closeTest} disabled={isLoading}>Закрыть</Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -377,53 +388,17 @@ const CognitiveTestsPage = () => {
             </DialogDescription>
           </DialogHeader>
           
-          {testResult && (
-            <div className="py-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 p-2 rounded-full">
-                  {getStatusIcon(testResult.status)}
-                </div>
-                <div>
-                  <div className="font-medium">{getStatusText(testResult.status)}</div>
-                  <div className="text-sm text-muted-foreground">Дата: {testResult.date}</div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Общий балл:</span>
-                  <span className="font-bold">{testResult.score}%</span>
-                </div>
-                <Progress value={testResult.score} className="h-2" />
-              </div>
-              
-              {testResult.errors && testResult.errors.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Обнаруженные проблемы:</h4>
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    {testResult.errors.map((error: string, index: number) => (
-                      <li key={index}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="bg-muted rounded-md p-4">
-                <h4 className="font-medium mb-2">Рекомендации:</h4>
-                <p className="text-sm text-muted-foreground">
-                  {testResult.status === "passed" 
-                    ? "Отличный результат! Продолжайте в том же духе."
-                    : testResult.status === "warning"
-                    ? "Рекомендуется повторно пройти тест в ближайшее время для улучшения показателей."
-                    : "Необходимо пройти повторный тест с целью улучшения результатов. Обратите внимание на допущенные ошибки."}
-                </p>
-              </div>
-            </div>
+          {testResults && (
+            <TestResults
+              result={testResults}
+              onClose={() => setShowResultDetails(false)}
+              onRetry={() => {
+                setShowResultDetails(false);
+                const testType = testResults.test_type;
+                setTimeout(() => startTest(testType), 300);
+              }}
+            />
           )}
-          
-          <DialogFooter>
-            <Button onClick={() => setShowResultDetails(false)}>Закрыть</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

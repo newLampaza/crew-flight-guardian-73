@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS CognitiveTests (
     test_id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id INTEGER NOT NULL,
     test_date TEXT NOT NULL,
-    test_type TEXT CHECK(test_type IN ('attention', 'memory', 'reaction')),
+    test_type TEXT CHECK(test_type IN ('attention', 'memory', 'reaction', 'cognitive')),
     score REAL NOT NULL,
     duration INTEGER NOT NULL,
     details TEXT,
@@ -162,6 +162,18 @@ CREATE TABLE IF NOT EXISTS Feedback (
     comments TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
+)
+''')
+
+# Test Images for cognitive tests
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS TestImages (
+    image_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    image_path TEXT NOT NULL,
+    correct_path TEXT,
+    difficulty INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 ''')
 
