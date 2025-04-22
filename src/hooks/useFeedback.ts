@@ -45,36 +45,9 @@ export function useFeedback() {
     }
   });
 
-  // Helper function to check if feedback exists for a specific entity
-  const hasFeedbackForEntity = (entityType: string, entityId: number) => {
-    return Array.isArray(feedbackHistory) && feedbackHistory.some(
-      feedback => feedback.type === entityType && feedback.entityId === entityId
-    );
-  };
-
   const submitFeedback = useMutation({
     mutationFn: async (feedback: FeedbackSubmission) => {
       console.log("Submitting feedback:", feedback);
-      
-      // For automatic submissions (empty comments), check if feedback already exists
-      const isAutoSubmission = feedback.comments === "";
-      if (isAutoSubmission) {
-        // Check if feedback already exists for this entity
-        if (hasFeedbackForEntity(feedback.entityType, feedback.entityId)) {
-          console.log(`Auto-feedback already exists for ${feedback.entityType} ID ${feedback.entityId}, skipping submission`);
-          // Return a mock successful response to avoid triggering the error handler
-          return { 
-            id: -1, 
-            entity_type: feedback.entityType,
-            entity_id: feedback.entityId,
-            rating: feedback.rating,
-            comments: feedback.comments,
-            // Add other required fields to match the API response structure
-            date: new Date().toISOString()
-          };
-        }
-      }
-      
       console.log("POST request to:", FEEDBACK_API);
       
       try {
@@ -96,11 +69,7 @@ export function useFeedback() {
     },
     onSuccess: (data) => {
       console.log("Feedback submitted successfully:", data);
-      
-      // Only invalidate queries for real submissions (not mock responses from skipped auto-submissions)
-      if (data.id !== -1) {
-        queryClient.invalidateQueries({ queryKey: ["feedback"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["feedback"] });
       
       // Only show toast for manual submissions (with comments)
       if (data.comments && data.comments.trim() !== "") {
@@ -115,21 +84,14 @@ export function useFeedback() {
     onError: (error: any) => {
       console.error("Error submitting feedback:", error);
       
-      // Handle 409 Conflict (feedback already exists)
       if (error.response?.status === 409) {
-        // Check if this is an automatic submission (empty comments)
-        const isAutoSubmission = error.config?.data ? 
-          JSON.parse(error.config.data).comments === "" : false;
-        
-        if (!isAutoSubmission) {
+        // Don't show toast for automatic submissions
+        if (error.config?.data && JSON.parse(error.config.data).comments !== "") {
           toast({
             title: "Отзыв уже существует",
             description: "Вы уже оставили отзыв для этого объекта",
             variant: "default"
           });
-        } else {
-          // For automatic submissions, just log silently without showing toast
-          console.log("Auto-feedback already exists for this entity, ignoring silently");
         }
       } else {
         toast({
@@ -145,7 +107,6 @@ export function useFeedback() {
     feedbackHistory: Array.isArray(feedbackHistory) ? feedbackHistory : [],
     isLoading,
     error,
-    submitFeedback: submitFeedback.mutate,
-    hasFeedbackForEntity // Export the helper function for use in FeedbackPage
+    submitFeedback: submitFeedback.mutate
   };
 }
