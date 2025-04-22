@@ -5,32 +5,46 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MessageSquare, Star, Clock } from "lucide-react";
+import { MessageSquare, Star, Clock, AlertCircle } from "lucide-react";
 import { StarRating } from "@/components/fatigue-analysis/StarRating";
 import { useFeedback } from "@/hooks/useFeedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useFlights } from "@/hooks/useFlights";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [flightRating, setFlightRating] = useState(0);
-  const [selectedFlightId, setSelectedFlightId] = useState<number>(1);
+  const [selectedFlightId, setSelectedFlightId] = useState<number | null>(null);
   const { feedbackHistory, isLoading, submitFeedback } = useFeedback();
   const { data: flights = [], isLoading: flightsLoading } = useFlights();
+
+  // Check if feedback already exists for this flight
+  const hasExistingFeedback = (flightId: number) => {
+    return feedbackHistory.some(feedback => 
+      feedback.entityId === flightId && feedback.type === 'flight'
+    );
+  };
 
   // Используем первый доступный рейс по умолчанию
   useEffect(() => {
     if (flights?.length > 0 && !selectedFlightId) {
-      setSelectedFlightId(flights[0].flight_id);
+      // Find first flight without feedback
+      const availableFlight = flights.find(flight => !hasExistingFeedback(flight.flight_id));
+      setSelectedFlightId(availableFlight ? availableFlight.flight_id : flights[0].flight_id);
     }
-  }, [flights]);
+  }, [flights, feedbackHistory]);
 
   const currentFlight = flights?.find(f => f.flight_id === selectedFlightId);
   const flightInfo = currentFlight 
     ? `${currentFlight.from_code} - ${currentFlight.to_code}`
     : "Загрузка...";
+  
+  // Check if the currently selected flight already has feedback
+  const currentFlightHasFeedback = selectedFlightId ? hasExistingFeedback(selectedFlightId) : false;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +87,45 @@ const FeedbackPage = () => {
                 <MessageSquare className="h-5 w-5 text-primary" />
                 Отзыв о полете
               </CardTitle>
-              <CardDescription>
-                {flightInfo}
+              <CardDescription className="space-y-4">
+                {!flightsLoading && flights.length > 0 ? (
+                  <Select
+                    value={selectedFlightId?.toString() || ""}
+                    onValueChange={(value) => setSelectedFlightId(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Выберите рейс" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {flights.map((flight) => (
+                        <SelectItem 
+                          key={flight.flight_id} 
+                          value={flight.flight_id.toString()}
+                          disabled={hasExistingFeedback(flight.flight_id)}
+                        >
+                          {flight.from_code} - {flight.to_code} {hasExistingFeedback(flight.flight_id) ? "(отзыв отправлен)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div>{flightInfo}</div>
+                )}
               </CardDescription>
             </CardHeader>
+            
+            {currentFlightHasFeedback && (
+              <CardContent>
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Отзыв уже существует</AlertTitle>
+                  <AlertDescription>
+                    Вы уже оставили отзыв для этого рейса. Пожалуйста, выберите другой рейс.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            )}
+            
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -102,7 +151,7 @@ const FeedbackPage = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={!feedbackText || flightRating === 0}
+                  disabled={!feedbackText || flightRating === 0 || currentFlightHasFeedback}
                 >
                   Отправить отзыв
                 </Button>

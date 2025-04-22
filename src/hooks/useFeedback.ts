@@ -88,11 +88,20 @@ export function useFeedback() {
     onError: (error: any) => {
       console.error("Error submitting feedback:", error);
       
-      toast({
-        title: "Ошибка отправки",
-        description: error.response?.data?.error || "Произошла ошибка при отправке отзыва",
-        variant: "destructive"
-      });
+      // Check if it's a 409 Conflict (feedback already exists)
+      if (error.response?.status === 409) {
+        toast({
+          title: "Отзыв уже существует",
+          description: "Вы уже оставили отзыв для этого объекта",
+          variant: "warning"
+        });
+      } else {
+        toast({
+          title: "Ошибка отправки",
+          description: error.response?.data?.error || "Произошла ошибка при отправке отзыва",
+          variant: "destructive"
+        });
+      }
     }
   });
 
