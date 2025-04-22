@@ -142,7 +142,10 @@ const FeedbackPage = () => {
                 <MessageSquare className="h-5 w-5 text-primary" />
                 Отзыв о полете
               </CardTitle>
-              <CardDescription className="space-y-4">
+              <CardDescription>
+                Выберите рейс для отправки отзыва
+              </CardDescription>
+              <div className="space-y-4 mt-2">
                 {!flightsLoading && flights.length > 0 ? (
                   <Select
                     value={selectedFlightId?.toString() || ""}
@@ -172,7 +175,7 @@ const FeedbackPage = () => {
                 ) : (
                   <div>{flightInfo}</div>
                 )}
-              </CardDescription>
+              </div>
             </CardHeader>
             
             {currentFlightHasFeedback && (
