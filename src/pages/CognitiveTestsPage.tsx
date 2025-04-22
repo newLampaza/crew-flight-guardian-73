@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, ActivitySquare, MousePointer } from "lucide-react";
+import { Brain, ActivitySquare, MousePointer, Timer } from "lucide-react";
 import { TestCard } from "@/components/cognitive-tests/TestCard";
 import { TestDialog } from "@/components/cognitive-tests/TestDialog";
 import { ResultsDialog } from "@/components/cognitive-tests/ResultsDialog";
@@ -30,6 +30,13 @@ const testConfig = [
     description: "Проверка кратковременной памяти и способности к запоминанию",
     duration: "4 минуты",
     icon: <ActivitySquare className="h-5 w-5" />
+  },
+  {
+    id: "speed",
+    name: "Тест скорости",
+    description: "Оценка скорости обработки информации и принятия решений",
+    duration: "3 минуты",
+    icon: <Timer className="h-5 w-5" />
   }
 ];
 
