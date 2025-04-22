@@ -14,6 +14,7 @@ export interface TestQuestion {
   question: string;
   options?: string[];
   delay?: number;
+  correct_answer?: string;
 }
 
 export interface TestSession {
