@@ -42,8 +42,19 @@ const FeedbackPage = () => {
 
   useEffect(() => {
     if (flights?.length > 0 && !selectedFlightId) {
-      const availableFlight = flights.find(flight => !hasExistingFeedback(flight.flight_id));
-      setSelectedFlightId(availableFlight ? availableFlight.flight_id : flights[0].flight_id);
+      // Find the first available completed flight from the current week without feedback
+      const now = new Date();
+      const availableFlight = flights.find(flight => {
+        const arrivalDate = new Date(flight.arrival_time);
+        return arrivalDate < now && isInCurrentWeek(arrivalDate) && !hasExistingFeedback(flight.flight_id);
+      });
+      
+      if (availableFlight) {
+        setSelectedFlightId(availableFlight.flight_id);
+      } else if (flights.length > 0) {
+        // Default to first flight if no available flights found
+        setSelectedFlightId(flights[0].flight_id);
+      }
     }
   }, [flights, feedbackHistory]);
 
@@ -54,16 +65,25 @@ const FeedbackPage = () => {
   
   const currentFlightHasFeedback = selectedFlightId ? hasExistingFeedback(selectedFlightId) : false;
 
+  // Auto-submit feedback for flights that are over a week old without feedback
   useEffect(() => {
     if (!flights?.length || !submitFeedback) return;
 
     const now = new Date();
-    const pastFlights = flights.filter(flight => {
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(now.getDate() - 7);
+    
+    const oldUnratedFlights = flights.filter(flight => {
       const arrivalDate = new Date(flight.arrival_time);
-      return arrivalDate < now && !hasExistingFeedback(flight.flight_id) && !isInCurrentWeek(arrivalDate);
+      // Flights that:
+      // 1. Have already happened (arrival time in the past)
+      // 2. Don't have feedback yet
+      // 3. Are older than one week (outside the rating window)
+      return arrivalDate < oneWeekAgo && !hasExistingFeedback(flight.flight_id);
     });
 
-    pastFlights.forEach(flight => {
+    // Auto-submit 5-star ratings with no comments for old flights
+    oldUnratedFlights.forEach(flight => {
       submitFeedback({
         entityType: "flight",
         entityId: flight.flight_id,
@@ -71,11 +91,14 @@ const FeedbackPage = () => {
         comments: ""
       });
     });
-  }, [flights]);
+  }, [flights, feedbackHistory, submitFeedback]);
 
   const availableFlights = flights?.filter(flight => {
     const arrivalDate = new Date(flight.arrival_time);
-    return isInCurrentWeek(arrivalDate);
+    const now = new Date();
+    // Only include completed flights (arrival time in the past)
+    // and only those from the current week
+    return arrivalDate < now && isInCurrentWeek(arrivalDate) && !hasExistingFeedback(flight.flight_id);
   }) || [];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -186,13 +209,20 @@ const FeedbackPage = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={!feedbackText || flightRating === 0 || currentFlightHasFeedback}
-                >
-                  Отправить отзыв
-                </Button>
+                <div className="space-y-2 w-full">
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={!feedbackText || flightRating === 0 || currentFlightHasFeedback || availableFlights.length === 0}
+                  >
+                    Отправить отзыв
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    Рейсы доступны для оценки в течение недели после завершения. 
+                    Неоцененные рейсы автоматически получат 5 звезд.
+                  </p>
+                </div>
               </CardFooter>
             </form>
           </Card>

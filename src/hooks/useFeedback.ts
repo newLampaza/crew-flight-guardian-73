@@ -72,11 +72,13 @@ export function useFeedback() {
       queryClient.invalidateQueries({ queryKey: ["feedback"] });
       
       // Only show toast for manual submissions (with comments)
-      if (data.comments) {
+      if (data.comments && data.comments.trim() !== "") {
         toast({
           title: "Отзыв отправлен",
           description: "Спасибо за ваш отзыв!"
         });
+      } else {
+        console.log("Auto-feedback submitted silently for flight:", data.entity_id);
       }
     },
     onError: (error: any) => {
