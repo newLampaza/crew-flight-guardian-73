@@ -52,6 +52,7 @@ cp .env.example .env
 npm install date-fns@^3.0.0
 npm install --legacy-peer-deps
 npm install --force
+npm install react-day-picker@latest
 npm outdated
 npm install
 ```

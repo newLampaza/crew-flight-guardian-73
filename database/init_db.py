@@ -151,20 +151,6 @@ CREATE TABLE IF NOT EXISTS TestSessions (
 )
 ''')
 
-# Feedback table for storing user feedback
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS Feedback (
-    feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL,
-    entity_type TEXT CHECK(entity_type IN ('flight', 'cognitive_test', 'fatigue_analysis')) NOT NULL,
-    entity_id INTEGER NOT NULL,
-    rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
-    comments TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
-)
-''')
-
 # Create trigger for flight duration calculation
 cursor.execute('''
 CREATE TRIGGER IF NOT EXISTS CalculateFlightDuration 
@@ -176,45 +162,6 @@ BEGIN
         AS INTEGER)
     WHERE flight_id = NEW.flight_id;
 END;
-''')
-
-# Add test data for Employees
-cursor.execute('''
-INSERT OR IGNORE INTO Employees (employee_id, name, role, position, image_url, status)
-VALUES (1, 'Алексей Иванов', 'pilot', 'Капитан', '/pilot-avatar.jpg', 'active');
-''')
-
-# Add test user with a predefined password
-cursor.execute('''
-INSERT OR IGNORE INTO Users (employee_id, username, password, role) 
-VALUES (1, 'pilot', ?, 'pilot');
-''', (generate_password_hash('password'),))
-
-# Add test crew
-cursor.execute('''
-INSERT OR IGNORE INTO Crews (crew_id, crew_name)
-VALUES (1, 'Экипаж А-1');
-''')
-
-# Add crew member relationship
-cursor.execute('''
-INSERT OR IGNORE INTO CrewMembers (crew_id, employee_id, role)
-VALUES (1, 1, 'captain');
-''')
-
-# Add test flights
-cursor.execute('''
-INSERT OR IGNORE INTO Flights (
-    flight_id, crew_id, flight_number, departure_time, arrival_time,
-    from_code, from_city, to_code, to_city, aircraft, conditions, status
-)
-VALUES 
-(1, 1, 'SU-1492', '2025-04-20 09:00:00', '2025-04-20 10:30:00', 
- 'SVO', 'Москва', 'LED', 'Санкт-Петербург', 'Boeing 737', 'Ясно', 'completed'),
-(2, 1, 'SU-1493', '2025-04-21 11:30:00', '2025-04-21 13:00:00', 
- 'LED', 'Санкт-Петербург', 'SVO', 'Москва', 'Boeing 737', 'Облачно', 'completed'),
-(3, 1, 'SU-1494', '2025-04-22 15:00:00', '2025-04-22 16:30:00', 
- 'SVO', 'Москва', 'KZN', 'Казань', 'Airbus A320', 'Дождь', 'completed');
 ''')
 
 # Save changes and close connection
