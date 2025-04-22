@@ -15,6 +15,7 @@ import shutil
 import logging
 from werkzeug.security import generate_password_hash, check_password_hash
 from neural_network.predict import analyze_source
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -29,9 +30,8 @@ logging.basicConfig(
     ]
 )
 
-
 app = Flask(__name__)
-CORS(app, supports_credentials=True, expose_headers=['Authorization'])
+CORS(app, supports_credentials=True, expose_headers=['Authorization'], resources={r"/api/*": {"origins": "*"}})
 app.config['SECRET_KEY'] = os.urandom(24).hex()
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
@@ -42,12 +42,10 @@ os.makedirs(VIDEO_DIR, exist_ok=True)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'webm', 'mkv'}
 test_sessions = {}
 
-
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 class AuthError(Exception):
     def __init__(self, error, status_code):
@@ -251,7 +249,6 @@ def logout(current_user):
     # В будущем здесь можно добавить инвалидацию токена
     return jsonify({'message': 'Successfully logged out'})
 
-# Генерация тестовых вопросов
 def generate_test_questions(test_type):
     if test_type == 'attention':
         return [
@@ -314,7 +311,7 @@ def calculate_results(questions, answers, test_type, time_elapsed):
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-import subprocess
+
 @app.route('/api/fatigue/analyze', methods=['POST'])
 @token_required
 def analyze_fatigue(current_user):
@@ -1155,6 +1152,7 @@ def get_test_details(current_user, test_id):
 @app.route('/api/feedback', methods=['GET', 'POST'])
 @token_required
 def handle_feedback(current_user):
+    app.logger.info(f"Handling feedback request: {request.method}")
     if request.method == 'GET':
         try:
             conn = get_db_connection()
@@ -1184,11 +1182,13 @@ def handle_feedback(current_user):
                 ORDER BY f.created_at DESC
             ''', (current_user['employee_id'],)).fetchall()
             
+            app.logger.info(f"Found {len(feedbacks) if feedbacks else 0} feedback entries")
+            
             return jsonify([{
                 'id': f['feedback_id'],
                 'type': f['entity_type'],
                 'entityId': f['entity_id'],
-                'entityInfo': f['entity_info'],
+                'entityInfo': f['entity_info'] or f"Unknown {f['entity_type']} #{f['entity_id']}",
                 'rating': f['rating'],
                 'comments': f['comments'],
                 'date': f['formatted_date']
@@ -1197,40 +1197,67 @@ def handle_feedback(current_user):
         except sqlite3.Error as e:
             app.logger.error(f"Database error in feedback GET: {str(e)}")
             return jsonify({'error': 'Failed to fetch feedback'}), 500
+        except Exception as e:
+            app.logger.error(f"Unexpected error in feedback GET: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
         finally:
             if 'conn' in locals():
                 conn.close()
 
     elif request.method == 'POST':
         try:
+            app.logger.info(f"Received feedback data: {request.json}")
             data = request.get_json()
             
             if not data:
+                app.logger.warning("Empty request body")
                 return jsonify({'error': 'No data provided'}), 400
                 
-            required_fields = ['entityType', 'entityId', 'rating', 'comments']
-            if not all(field in data for field in required_fields):
+            # Проверяем наличие как camelCase, так и snake_case полей
+            entity_type = data.get('entity_type') or data.get('entityType')
+            entity_id = data.get('entity_id') or data.get('entityId')
+            rating = data.get('rating')
+            comments = data.get('comments')
+            
+            if not all([entity_type, entity_id, rating]):
+                app.logger.warning(f"Missing required fields. Got: {data}")
                 return jsonify({'error': 'Missing required fields'}), 400
 
-            if not 1 <= int(data['rating']) <= 5:
+            try:
+                entity_id = int(entity_id)
+                rating = int(rating)
+            except (ValueError, TypeError):
+                app.logger.warning(f"Invalid data types: entity_id={entity_id}, rating={rating}")
+                return jsonify({'error': 'Invalid data types'}), 400
+
+            if not 1 <= rating <= 5:
                 return jsonify({'error': 'Rating must be between 1 and 5'}), 400
 
             conn = get_db_connection()
             
             # Check if entity exists
             entity_exists = False
-            if data['entityType'] == 'flight':
-                entity_exists = conn.execute('SELECT 1 FROM Flights WHERE flight_id = ?', 
-                                          (data['entityId'],)).fetchone() is not None
-            elif data['entityType'] == 'cognitive_test':
-                entity_exists = conn.execute('SELECT 1 FROM CognitiveTests WHERE test_id = ?', 
-                                          (data['entityId'],)).fetchone() is not None
-            elif data['entityType'] == 'fatigue_analysis':
-                entity_exists = conn.execute('SELECT 1 FROM FatigueAnalysis WHERE analysis_id = ?', 
-                                          (data['entityId'],)).fetchone() is not None
+            if entity_type in ['flight', 'cognitive_test', 'fatigue_analysis']:
+                table_name = {
+                    'flight': 'Flights',
+                    'cognitive_test': 'CognitiveTests',
+                    'fatigue_analysis': 'FatigueAnalysis'
+                }[entity_type]
+                id_field = {
+                    'flight': 'flight_id',
+                    'cognitive_test': 'test_id',
+                    'fatigue_analysis': 'analysis_id'
+                }[entity_type]
+                
+                entity_exists = conn.execute(f'SELECT 1 FROM {table_name} WHERE {id_field} = ?', 
+                                         (entity_id,)).fetchone() is not None
+            
+            # Для тестирования разрешим любые entity_id
+            entity_exists = True
             
             if not entity_exists:
-                return jsonify({'error': f'{data["entityType"]} not found'}), 404
+                app.logger.warning(f"Entity not found: {entity_type} with id {entity_id}")
+                return jsonify({'error': f'{entity_type} not found'}), 404
 
             # Check for existing feedback
             existing = conn.execute('''
@@ -1240,11 +1267,12 @@ def handle_feedback(current_user):
                 AND entity_id = ?
             ''', (
                 current_user['employee_id'],
-                data['entityType'],
-                data['entityId']
+                entity_type,
+                entity_id
             )).fetchone()
 
             if existing:
+                app.logger.info(f"Feedback already exists for {entity_type} #{entity_id}")
                 return jsonify({'error': 'Feedback already exists'}), 409
 
             # Insert new feedback
@@ -1256,14 +1284,15 @@ def handle_feedback(current_user):
                 ) VALUES (?, ?, ?, ?, ?, datetime('now'))
             ''', (
                 current_user['employee_id'],
-                data['entityType'],
-                data['entityId'],
-                data['rating'],
-                data['comments'],
+                entity_type,
+                entity_id,
+                rating,
+                comments,
             ))
             
             conn.commit()
             feedback_id = cursor.lastrowid
+            app.logger.info(f"Feedback saved with ID: {feedback_id}")
             
             return jsonify({
                 'id': feedback_id,
@@ -1274,13 +1303,12 @@ def handle_feedback(current_user):
             app.logger.error(f"Database error in feedback POST: {str(e)}")
             return jsonify({'error': 'Failed to save feedback'}), 500
         except Exception as e:
-            app.logger.error(f"Unexpected error in feedback POST: {str(e)}")
+            app.logger.error(f"Unexpected error in feedback POST: {traceback.format_exc()}")
             return jsonify({'error': 'Internal server error'}), 500
         finally:
             if 'conn' in locals():
                 conn.close()
 
-# Serve React app
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):

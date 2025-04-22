@@ -7,6 +7,29 @@ import { useToast } from "@/hooks/use-toast";
 // The API endpoint matches the backend route in routes.py
 const FEEDBACK_API = "/api/feedback";
 
+// Настройка axios для обработки CORS
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Add request interceptor for JWT
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken") || localStorage.getItem("fatigue-guard-token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export function useFeedback() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -17,7 +40,7 @@ export function useFeedback() {
     queryFn: async () => {
       console.log("Fetching feedback from:", FEEDBACK_API);
       try {
-        const { data } = await axios.get<Feedback[]>(FEEDBACK_API);
+        const { data } = await api.get<Feedback[]>(FEEDBACK_API);
         // Ensure we always return an array, even if the API returns something else
         return Array.isArray(data) ? data : [];
       } catch (error) {
@@ -34,7 +57,7 @@ export function useFeedback() {
       console.log("POST request to:", FEEDBACK_API);
       
       try {
-        // The backend expects snake_case field names as seen in routes.py
+        // Отправляем в формате, совместимом с бэкендом
         const requestData = {
           entity_type: feedback.entityType,
           entity_id: feedback.entityId,
@@ -43,7 +66,7 @@ export function useFeedback() {
         };
         
         console.log("Sending formatted data:", requestData);
-        const response = await axios.post(FEEDBACK_API, requestData);
+        const response = await api.post(FEEDBACK_API, requestData);
         console.log("Success response:", response.data);
         return response.data;
       } catch (error) {

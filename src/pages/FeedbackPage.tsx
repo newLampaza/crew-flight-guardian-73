@@ -1,33 +1,47 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Star, Clock } from "lucide-react";
 import { StarRating } from "@/components/fatigue-analysis/StarRating";
 import { useFeedback } from "@/hooks/useFeedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useFlights } from "@/hooks/useFlights";
 
 const FeedbackPage = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [flightRating, setFlightRating] = useState(0);
+  const [selectedFlightId, setSelectedFlightId] = useState<number>(1);
   const { feedbackHistory, isLoading, submitFeedback } = useFeedback();
+  const { data: flights = [], isLoading: flightsLoading } = useFlights();
+
+  // Используем первый доступный рейс по умолчанию
+  useEffect(() => {
+    if (flights?.length > 0 && !selectedFlightId) {
+      setSelectedFlightId(flights[0].flight_id);
+    }
+  }, [flights]);
+
+  const currentFlight = flights?.find(f => f.flight_id === selectedFlightId);
+  const flightInfo = currentFlight 
+    ? `${currentFlight.from_code} - ${currentFlight.to_code}`
+    : "Загрузка...";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!feedbackText || flightRating === 0) {
+    if (!feedbackText || flightRating === 0 || !selectedFlightId) {
       return;
     }
     
     submitFeedback({
       entityType: "flight",
-      entityId: 1, // We'll need to get the actual flight ID
+      entityId: selectedFlightId,
       rating: flightRating,
       comments: feedbackText
     });
@@ -57,10 +71,10 @@ const FeedbackPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-primary" />
-                Отзыв о текущем полете
+                Отзыв о полете
               </CardTitle>
               <CardDescription>
-                Рейс SU-1492, Москва - Санкт-Петербург
+                {flightInfo}
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
