@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -40,28 +41,21 @@ api.interceptors.request.use(
 
 const fetchFlights = async (): Promise<FlightApi[]> => {
   try {
-    console.log("Fetching flights from API...");
     const response = await api.get("/api/flights");
-    
-    console.log("API Response:", response.data);
     
     if (!Array.isArray(response.data)) {
       if (response.data && Array.isArray(response.data.flights)) {
         return response.data.flights;
       }
-      console.error("API returned unexpected data format:", response.data);
       return [];
     }
     
     return response.data;
   } catch (error) {
-    console.error("Error fetching flights:", error);
     if (axios.isAxiosError(error)) {
-      console.error("Axios error details:", {
+      console.error("Error fetching flights:", {
         status: error.response?.status,
-        statusText: error.response?.statusText,
         data: error.response?.data,
-        headers: error.response?.headers
       });
     }
     throw error; // Let react-query handle the error

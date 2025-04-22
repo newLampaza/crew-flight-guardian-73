@@ -1,6 +1,6 @@
 
 import { useRef, useState, useEffect } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseMediaRecorderProps {
   maxRecordingTime?: number; // in milliseconds
@@ -8,6 +8,7 @@ interface UseMediaRecorderProps {
 }
 
 export const useMediaRecorder = ({ maxRecordingTime = 30000, onRecordingComplete }: UseMediaRecorderProps) => {
+  const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
