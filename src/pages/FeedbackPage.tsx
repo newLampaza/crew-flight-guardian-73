@@ -65,39 +65,32 @@ const FeedbackPage = () => {
   
   const currentFlightHasFeedback = selectedFlightId ? hasExistingFeedback(selectedFlightId) : false;
 
-  // Auto-submit feedback for flights that are over a week old without feedback
+  // Auto-submit feedback only for flights that are over a week old
   useEffect(() => {
     if (!flights?.length || !submitFeedback) return;
 
     const now = new Date();
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(now.getDate() - 7);
-    
-    const oldUnratedFlights = flights.filter(flight => {
+
+    const flight = flights.find(flight => {
       const arrivalDate = new Date(flight.arrival_time);
-      // Flights that:
-      // 1. Have already happened (arrival time in the past)
-      // 2. Don't have feedback yet
-      // 3. Are older than one week (outside the rating window)
       return arrivalDate < oneWeekAgo && !hasExistingFeedback(flight.flight_id);
     });
 
-    // Auto-submit 5-star ratings with no comments for old flights
-    oldUnratedFlights.forEach(flight => {
+    if (flight) {
       submitFeedback({
         entityType: "flight",
         entityId: flight.flight_id,
         rating: 5,
         comments: ""
       });
-    });
+    }
   }, [flights, feedbackHistory, submitFeedback]);
 
   const availableFlights = flights?.filter(flight => {
     const arrivalDate = new Date(flight.arrival_time);
     const now = new Date();
-    // Only include completed flights (arrival time in the past)
-    // and only those from the current week
     return arrivalDate < now && isInCurrentWeek(arrivalDate) && !hasExistingFeedback(flight.flight_id);
   }) || [];
 
