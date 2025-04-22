@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -82,7 +81,7 @@ const CognitiveTestsPage = () => {
 
   const viewTestResults = async (testId: string) => {
     try {
-      const result = await cognitiveTestsApi.getResults(Number(testId));
+      const result = await cognitiveTestsApi.getTestResults(Number(testId));
       setTestResult(result);
       setShowResults(true);
     } catch (error) {
