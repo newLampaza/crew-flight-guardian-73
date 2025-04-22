@@ -36,7 +36,16 @@ export function useFeedback() {
       console.log("POST request to:", FEEDBACK_API);
       
       try {
-        const { data } = await axios.post(FEEDBACK_API, feedback);
+        // Структура должна точно соответствовать ожиданиям сервера из routes.py
+        const requestData = {
+          entityType: feedback.entityType,
+          entityId: feedback.entityId,
+          rating: feedback.rating,
+          comments: feedback.comments
+        };
+        
+        console.log("Formatted request data:", requestData);
+        const { data } = await axios.post(FEEDBACK_API, requestData);
         console.log("Success response:", data);
         return data;
       } catch (error) {
