@@ -165,25 +165,17 @@ function toastFunction(options: ToastOptions) {
   
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
-  // Set default duration if not provided
-  const duration = options.duration || TOAST_REMOVE_DELAY;
-
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
       ...options,
       open: true,
-      duration: duration,
       onOpenChange: (open) => {
         if (!open) dismiss()
         if (options.onOpenChange) options.onOpenChange(open)
       },
     },
   })
-
-  // We don't need to manually dismiss here since we already set
-  // the duration and onOpenChange properties on the toast
-  // which handles dismissal automatically through Radix UI
 
   return {
     id,
