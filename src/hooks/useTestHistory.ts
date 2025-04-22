@@ -17,7 +17,7 @@ export const useTestHistory = () => {
   const fetchTestHistory = async () => {
     try {
       const history = await cognitiveTestsApi.getTestHistory();
-      setTestHistory(history || []);
+      setTestHistory(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error("Failed to fetch test history:", error);
       toast({
@@ -57,6 +57,17 @@ export const useTestHistory = () => {
   const viewTestDetails = async (testId: string) => {
     try {
       setIsLoading(true);
+      
+      // Ensure testHistory is an array before filtering
+      if (!Array.isArray(testHistory)) {
+        toast({
+          title: "Ошибка",
+          description: "История тестов не загружена",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
       
       const tests = testHistory.filter(test => test.test_type === testId);
       if (tests.length === 0) {

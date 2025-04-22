@@ -2,7 +2,9 @@
 import axios from 'axios';
 import { TestHistory, TestSession, TestResult, TestResultSummary } from '../types/cognitivetests';
 
-const API_URL = '/api';
+// For development environment, we need to use the full URL with port
+// In production, the API_URL should be just '/api'
+const API_URL = import.meta.env.DEV ? 'http://localhost:5000/api' : '/api';
 
 export const cognitiveTestsApi = {
   // Получить историю тестов
