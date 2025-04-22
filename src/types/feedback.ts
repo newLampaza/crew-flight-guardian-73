@@ -1,4 +1,3 @@
-
 export type FeedbackEntityType = 'flight' | 'cognitive_test' | 'fatigue_analysis';
 
 export interface Feedback {

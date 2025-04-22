@@ -1,4 +1,5 @@
 from logging.handlers import RotatingFileHandler
+import subprocess
 import traceback
 import cv2
 from flask import Flask, jsonify, request, send_file, send_from_directory
