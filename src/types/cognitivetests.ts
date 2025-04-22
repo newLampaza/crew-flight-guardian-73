@@ -24,7 +24,7 @@ export interface TestQuestion {
   answer_options?: string[];
   question_text?: string;
   animation?: string;
-  multiple_select?: boolean; // Добавляем флаг для выбора нескольких вариантов
+  multiple_select: boolean; // Обновили: Убрали комментарий и сделали обязательным
 }
 
 export interface TestSession {
