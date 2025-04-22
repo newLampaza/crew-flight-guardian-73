@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { TestHistory, TestSession, TestResult, TestResultSummary } from '../types/cognitivetests';
+import { TestHistory, TestSession, TestResult, TestResultSummary, QuestionResponse } from '../types/cognitivetests';
 
 // For development environment, we need to use the full URL with port
 // In production, the API_URL should be just '/api'
@@ -35,7 +35,7 @@ export const cognitiveTestsApi = {
       const response = await apiClient.get('/cognitive-tests');
       return response.data || [];
     } catch (error) {
-      console.error('Failed to fetch test history:', error);
+      console.error('Не удалось получить историю тестов:', error);
       throw error;
     }
   },
@@ -58,6 +58,12 @@ export const cognitiveTestsApi = {
   // Получить детальные результаты теста
   getTestResults: async (testId: number): Promise<TestResult> => {
     const response = await apiClient.get(`/tests/results/${testId}`);
+    return response.data;
+  },
+  
+  // Проверить статус перезарядки теста
+  checkTestCooldown: async (testType: string): Promise<{ in_cooldown: boolean, cooldown_end?: string }> => {
+    const response = await apiClient.get(`/tests/cooldown/${testType}`);
     return response.data;
   }
 };

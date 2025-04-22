@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Clock, CheckCircle, XCircle, Brain, ActivitySquare, MousePointer, BarChart } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Calendar, BarChart, Timer } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface TestCardProps {
@@ -17,11 +17,14 @@ interface TestCardProps {
     score: number;
     date: string;
     errors: string[];
+    inCooldown?: boolean;
+    cooldownEnd?: string;
   };
   icon: React.ReactNode;
   onStartTest: (testId: string) => void;
   onViewResults: (testId: string) => void;
   mode?: 'compact' | 'full';
+  showResultsButton?: boolean;
 }
 
 export const TestCard: React.FC<TestCardProps> = ({
@@ -33,7 +36,8 @@ export const TestCard: React.FC<TestCardProps> = ({
   icon,
   onStartTest,
   onViewResults,
-  mode = 'full'
+  mode = 'full',
+  showResultsButton = true
 }) => {
   // Получить цвет статуса
   const getStatusColor = (status: string) => {
@@ -65,9 +69,32 @@ export const TestCard: React.FC<TestCardProps> = ({
     }
   };
 
+  // Форматирование времени перезарядки
+  const formatCooldownTime = (cooldownEnd?: string) => {
+    if (!cooldownEnd) return null;
+    
+    const cooldownDate = new Date(cooldownEnd);
+    const now = new Date();
+    
+    if (cooldownDate <= now) return null;
+    
+    const diffMs = cooldownDate.getTime() - now.getTime();
+    const diffMinutes = Math.ceil(diffMs / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} мин.`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
+    }
+  };
+
+  const cooldownTime = lastResult?.cooldownEnd ? formatCooldownTime(lastResult.cooldownEnd) : null;
+
   if (mode === 'compact') {
     return (
-      <Card className="hover-card transition-all duration-300">
+      <Card className="hover-card transition-all duration-300 animate-fade-in">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center flex-wrap gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -87,7 +114,7 @@ export const TestCard: React.FC<TestCardProps> = ({
             )}
           </div>
           <CardDescription className="flex items-center mt-1">
-            <Clock className="h-3 w-3 mr-1" />
+            <Calendar className="h-3 w-3 mr-1" />
             Последнее прохождение: {lastResult?.date || 'Нет данных'}
           </CardDescription>
         </CardHeader>
@@ -99,6 +126,16 @@ export const TestCard: React.FC<TestCardProps> = ({
                 <span className="font-bold">{lastResult.score}%</span>
               </div>
               <Progress value={lastResult.score} className="h-2" />
+            </div>
+          )}
+          
+          {lastResult?.inCooldown && cooldownTime && (
+            <div className="flex items-center justify-between text-amber-500">
+              <span className="flex items-center text-sm">
+                <Timer className="h-4 w-4 mr-1" /> 
+                Перезарядка:
+              </span>
+              <span className="text-sm font-medium">{cooldownTime}</span>
             </div>
           )}
           
@@ -115,12 +152,20 @@ export const TestCard: React.FC<TestCardProps> = ({
             </Alert>
           )}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex justify-between gap-2">
+          <Button 
+            onClick={() => onViewResults(id)}
+            variant="outline"
+            className="flex-1"
+          >
+            Подробнее
+          </Button>
           <Button 
             onClick={() => onStartTest(id)}
-            className="w-full transition-all duration-300 hover:scale-[1.02]"
+            className="flex-1 transition-all duration-300 hover:scale-[1.02]"
+            disabled={lastResult?.inCooldown}
           >
-            Пройти повторно
+            {lastResult?.inCooldown ? "Недоступен" : "Пройти тест"}
           </Button>
         </CardFooter>
       </Card>
@@ -128,7 +173,7 @@ export const TestCard: React.FC<TestCardProps> = ({
   }
 
   return (
-    <Card className="hover-card transition-all duration-300">
+    <Card className="hover-card transition-all duration-300 animate-fade-in">
       <CardHeader>
         <div className="flex items-start gap-2">
           <div className="mt-1 p-2 rounded-full bg-primary/10">
@@ -158,20 +203,32 @@ export const TestCard: React.FC<TestCardProps> = ({
             </div>
           </div>
         )}
+        {lastResult?.inCooldown && cooldownTime && (
+          <div className="flex items-center justify-between mt-2 text-amber-500">
+            <span className="flex items-center text-sm">
+              <Timer className="h-4 w-4 mr-1" />
+              Перезарядка:
+            </span>
+            <span className="text-sm font-medium">{cooldownTime}</span>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between gap-2 flex-wrap">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => onViewResults(id)}
-        >
-          Результаты
-        </Button>
+        {showResultsButton && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => onViewResults(id)}
+          >
+            Результаты
+          </Button>
+        )}
         <Button 
           onClick={() => onStartTest(id)}
           size="sm"
+          disabled={lastResult?.inCooldown}
         >
-          Начать тест
+          {lastResult?.inCooldown ? "Недоступен" : "Начать тест"}
         </Button>
       </CardFooter>
     </Card>

@@ -36,13 +36,33 @@ export const useCognitiveTest = () => {
       try {
         await refreshToken();
       } catch (refreshError) {
-        console.error("Failed to refresh token:", refreshError);
+        console.error("Не удалось обновить токен:", refreshError);
         toast({
           title: "Ошибка авторизации",
           description: "Не удалось обновить токен. Пожалуйста, войдите снова",
           variant: "destructive"
         });
         return;
+      }
+
+      // Проверяем период перезарядки теста
+      try {
+        const cooldownCheck = await cognitiveTestsApi.checkTestCooldown(testId);
+        if (cooldownCheck.in_cooldown) {
+          const cooldownEnd = new Date(cooldownCheck.cooldown_end as string);
+          const now = new Date();
+          const diffMinutes = Math.ceil((cooldownEnd.getTime() - now.getTime()) / (1000 * 60));
+          
+          toast({
+            title: "Тест недоступен",
+            description: `Повторное прохождение будет доступно через ${diffMinutes} мин.`,
+            variant: "warning"
+          });
+          return;
+        }
+      } catch (cooldownError) {
+        console.error("Ошибка при проверке перезарядки:", cooldownError);
+        // Продолжаем, так как это не критическая ошибка
       }
 
       setIsLoading(true);
@@ -67,7 +87,7 @@ export const useCognitiveTest = () => {
         description: `Тест состоит из ${session.questions.length} вопросов`,
       });
     } catch (error) {
-      console.error("Failed to start test:", error);
+      console.error("Не удалось начать тест:", error);
       
       // Более информативное сообщение об ошибке
       let errorMessage = "Не удалось начать тест";
@@ -126,7 +146,7 @@ export const useCognitiveTest = () => {
       try {
         await refreshToken();
       } catch (refreshError) {
-        console.error("Failed to refresh token before submitting:", refreshError);
+        console.error("Не удалось обновить токен перед отправкой:", refreshError);
       }
       
       const result = await cognitiveTestsApi.submitTest(testId, answers);
@@ -150,7 +170,7 @@ export const useCognitiveTest = () => {
       setIsLoading(false);
       return fullResults;
     } catch (error) {
-      console.error("Failed to submit test:", error);
+      console.error("Не удалось отправить результаты теста:", error);
       
       // Обработка различных ошибок
       let errorMessage = "Не удалось отправить результаты теста";

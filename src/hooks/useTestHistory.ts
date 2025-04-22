@@ -29,7 +29,7 @@ export const useTestHistory = () => {
       const history = await cognitiveTestsApi.getTestHistory();
       setTestHistory(Array.isArray(history) ? history : []);
     } catch (error) {
-      console.error("Failed to fetch test history:", error);
+      console.error("Не удалось загрузить историю тестов:", error);
       
       // Более информативное сообщение об ошибке
       let errorMessage = "Не удалось загрузить историю тестов";
@@ -64,12 +64,48 @@ export const useTestHistory = () => {
     if (lastTest.score >= 85) status = "passed";
     else if (lastTest.score >= 70) status = "warning";
     
+    // Проверяем, находится ли тест в перезарядке
+    let inCooldown = false;
+    let cooldownEnd = null;
+    
+    if (lastTest.cooldown_end) {
+      const cooldownEndDate = new Date(lastTest.cooldown_end);
+      if (cooldownEndDate > new Date()) {
+        inCooldown = true;
+        cooldownEnd = lastTest.cooldown_end;
+      }
+    }
+    
     return {
       status,
       score: lastTest.score,
       date: new Date(lastTest.test_date).toLocaleDateString('ru-RU'),
-      errors: []
+      errors: [],
+      inCooldown,
+      cooldownEnd
     };
+  };
+
+  const checkTestCooldown = async (testType: string): Promise<boolean> => {
+    try {
+      const response = await cognitiveTestsApi.checkTestCooldown(testType);
+      if (response.in_cooldown) {
+        const cooldownEnd = new Date(response.cooldown_end as string);
+        const now = new Date();
+        const diffMinutes = Math.ceil((cooldownEnd.getTime() - now.getTime()) / (1000 * 60));
+        
+        toast({
+          title: "Тест недоступен",
+          description: `Тест будет доступен через ${diffMinutes} мин.`,
+          variant: "warning"
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Ошибка при проверке перезарядки теста:", error);
+      return false;
+    }
   };
 
   const viewTestDetails = async (testId: string) => {
@@ -105,7 +141,7 @@ export const useTestHistory = () => {
       setShowResultDetails(true);
       setIsLoading(false);
     } catch (error) {
-      console.error("Failed to get test results:", error);
+      console.error("Не удалось загрузить результаты теста:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить результаты теста",
@@ -123,6 +159,7 @@ export const useTestHistory = () => {
     isLoading,
     getLastResult,
     viewTestDetails,
+    checkTestCooldown,
     refreshHistory: fetchTestHistory
   };
 };

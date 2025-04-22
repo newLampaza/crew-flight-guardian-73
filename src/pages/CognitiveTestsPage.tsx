@@ -1,16 +1,17 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, ActivitySquare, MousePointer, Timer, Loader2 } from "lucide-react";
+import { Brain, ActivitySquare, MousePointer, Timer, Loader2, BarChart, RefreshCw } from "lucide-react";
 import { TestCard } from "@/components/cognitive-tests/TestCard";
 import { TestDialog } from "@/components/cognitive-tests/TestDialog";
 import { ResultsDialog } from "@/components/cognitive-tests/ResultsDialog";
 import { useCognitiveTest } from "@/hooks/useCognitiveTest";
 import { useTestHistory } from "@/hooks/useTestHistory";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 // Конфигурация доступных тестов
 const testConfig = [
@@ -47,6 +48,7 @@ const testConfig = [
 const CognitiveTestsPage = () => {
   const isMobile = useIsMobile();
   const { isAuthenticated, refreshToken } = useAuth();
+  const [activeTab, setActiveTab] = useState("available");
   
   useEffect(() => {
     // Обновляем токен при входе на страницу
@@ -76,7 +78,8 @@ const CognitiveTestsPage = () => {
     isLoading: historyLoading,
     getLastResult,
     viewTestDetails,
-    refreshHistory
+    refreshHistory,
+    checkTestCooldown
   } = useTestHistory();
 
   // Обновляем историю при завершении теста
@@ -88,15 +91,23 @@ const CognitiveTestsPage = () => {
 
   const activeTestConfig = testConfig.find(t => t.id === activeTestId);
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     if (activeTestId) {
-      startTest(activeTestId);
+      // Проверяем, находится ли тест в перезарядке
+      const inCooldown = await checkTestCooldown(activeTestId);
+      if (!inCooldown) {
+        startTest(activeTestId);
+      }
     }
   };
 
-  const handleRetryTest = (testId: string) => {
+  const handleRetryTest = async (testId: string) => {
     setShowResultDetails(false);
-    setTimeout(() => startTest(testId), 300);
+    // Проверяем, находится ли тест в перезарядке
+    const inCooldown = await checkTestCooldown(testId);
+    if (!inCooldown) {
+      setTimeout(() => startTest(testId), 300);
+    }
   };
 
   const handleCloseTest = () => {
@@ -107,7 +118,7 @@ const CognitiveTestsPage = () => {
     }
   };
 
-  const renderTestCards = (mode?: 'compact') => {
+  const renderAvailableTests = () => {
     if (historyLoading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,9 +161,87 @@ const CognitiveTestsPage = () => {
             icon={test.icon}
             onStartTest={startTest}
             onViewResults={viewTestDetails}
-            mode={mode}
+            showResultsButton={false}
           />
         ))}
+      </div>
+    );
+  };
+
+  const renderTestResults = () => {
+    if (historyLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map(i => (
+            <div key={i} className="p-4 border rounded-lg space-y-2">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <div className="flex justify-between items-center pt-2">
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (!isAuthenticated) {
+      return (
+        <Alert>
+          <AlertTitle>Требуется авторизация</AlertTitle>
+          <AlertDescription>
+            Для доступа к результатам тестов необходимо авторизоваться в системе.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    // Фильтруем только те тесты, по которым есть результаты
+    const testsWithResults = testConfig.filter(test => getLastResult(test.id) !== null);
+
+    if (testsWithResults.length === 0) {
+      return (
+        <Alert>
+          <AlertTitle>Нет результатов</AlertTitle>
+          <AlertDescription>
+            У вас пока нет пройденных тестов. Перейдите на вкладку "Доступные тесты" и пройдите хотя бы один тест.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">История результатов</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshHistory}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Обновить
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {testsWithResults.map((test) => (
+            <TestCard
+              key={test.id}
+              id={test.id}
+              name={test.name}
+              description={test.description}
+              duration={test.duration}
+              lastResult={getLastResult(test.id)}
+              icon={test.icon}
+              onStartTest={startTest}
+              onViewResults={viewTestDetails}
+              mode='compact'
+            />
+          ))}
+        </div>
       </div>
     );
   };
@@ -164,10 +253,23 @@ const CognitiveTestsPage = () => {
         {historyLoading && <Loader2 className="h-5 w-5 animate-spin" />}
       </div>
       
-      <Tabs defaultValue="available" className="w-full">
+      <Tabs 
+        defaultValue="available" 
+        className="w-full"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
         <TabsList className="mb-4 w-full flex-wrap">
-          <TabsTrigger value="available" className="flex-1">Доступные тесты</TabsTrigger>
-          <TabsTrigger value="results" className="flex-1">Результаты</TabsTrigger>
+          <TabsTrigger value="available" className="flex-1 flex items-center gap-1">
+            <Brain className="h-4 w-4 md:mr-1" />
+            <span className="hidden md:inline">Доступные тесты</span>
+            <span className="md:hidden">Тесты</span>
+          </TabsTrigger>
+          <TabsTrigger value="results" className="flex-1 flex items-center gap-1">
+            <BarChart className="h-4 w-4 md:mr-1" />
+            <span className="hidden md:inline">Результаты тестов</span>
+            <span className="md:hidden">Результаты</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="available" className="space-y-4 animate-fade-in">
@@ -175,14 +277,14 @@ const CognitiveTestsPage = () => {
             Когнитивные тесты помогают оценить ваше текущее психофизиологическое состояние и готовность к полету.
             Каждый тест состоит из нескольких вопросов и займет не более 5 минут.
           </p>
-          {renderTestCards()}
+          {renderAvailableTests()}
         </TabsContent>
         
         <TabsContent value="results" className="space-y-4 animate-fade-in">
           <p className="text-muted-foreground mb-4">
             Здесь отображаются результаты ваших последних тестов. Нажмите "Подробнее" для просмотра детальной информации о каждом тесте.
           </p>
-          {renderTestCards('compact')}
+          {renderTestResults()}
         </TabsContent>
       </Tabs>
       

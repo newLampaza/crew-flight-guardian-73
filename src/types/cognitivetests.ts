@@ -6,6 +6,7 @@ export interface TestHistory {
   score: number;
   duration: number;
   details: string;
+  cooldown_end?: string; // Добавляем время окончания перезарядки теста
 }
 
 export interface TestQuestion {
@@ -22,6 +23,7 @@ export interface TestQuestion {
   correct_answer?: string;
   answer_options?: string[];
   question_text?: string;
+  animation?: string; // Добавляем поле для анимации
 }
 
 export interface TestSession {
@@ -42,6 +44,7 @@ export interface TestResult {
     error_analysis?: Record<string, number>;
   };
   mistakes: TestMistake[];
+  cooldown_end?: string; // Добавляем время окончания перезарядки теста
 }
 
 export interface TestMistake {
@@ -55,6 +58,7 @@ export interface TestResultSummary {
   test_id: number;
   total_questions?: number;
   correct_answers?: number;
+  cooldown_end?: string; // Добавляем время окончания перезарядки теста
 }
 
 export interface QuestionResponse {

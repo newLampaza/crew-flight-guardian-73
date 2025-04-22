@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BadgeCheck, AlertCircle, Clock, Brain, Calendar } from "lucide-react";
+import { BadgeCheck, AlertCircle, Clock, Brain, Calendar, Timer } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -40,6 +40,27 @@ export const TestResults: React.FC<TestResultsProps> = ({
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+  
+  // Форматируем время перезарядки
+  const formatCooldownTime = (cooldownEndString?: string) => {
+    if (!cooldownEndString) return null;
+    
+    const cooldownEnd = new Date(cooldownEndString);
+    const now = new Date();
+    
+    if (cooldownEnd <= now) return null;
+    
+    const diffMs = cooldownEnd.getTime() - now.getTime();
+    const diffMinutes = Math.ceil(diffMs / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} мин.`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
+    }
   };
 
   // Получаем цвет прогресса в зависимости от результата
@@ -102,9 +123,13 @@ export const TestResults: React.FC<TestResultsProps> = ({
 
   // Категории ошибок
   const errorCategories = categorizeErrors();
+  
+  // Проверяем наличие перезарядки
+  const cooldownTime = result.cooldown_end ? formatCooldownTime(result.cooldown_end) : null;
+  const inCooldown = cooldownTime !== null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle>{getTestTypeName(result.test_type)}</CardTitle>
@@ -140,6 +165,16 @@ export const TestResults: React.FC<TestResultsProps> = ({
                 </span>
               </div>
             </div>
+            
+            {inCooldown && (
+              <div className="flex items-center justify-between text-amber-500 py-1 px-2 bg-amber-50 rounded-md">
+                <span className="flex items-center text-sm">
+                  <Timer className="h-4 w-4 mr-1" />
+                  Повторное прохождение доступно через:
+                </span>
+                <span className="text-sm font-medium">{cooldownTime}</span>
+              </div>
+            )}
             
             <Separator />
             
@@ -191,8 +226,8 @@ export const TestResults: React.FC<TestResultsProps> = ({
         </CardContent>
         <CardFooter className="flex justify-between">
           {onRetry && (
-            <Button variant="outline" onClick={onRetry}>
-              Повторить тест
+            <Button variant="outline" onClick={onRetry} disabled={inCooldown}>
+              {inCooldown ? `Недоступен (${cooldownTime})` : "Повторить тест"}
             </Button>
           )}
           {onClose && (
