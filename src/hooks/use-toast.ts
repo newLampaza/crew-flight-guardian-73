@@ -181,10 +181,9 @@ function toastFunction(options: ToastOptions) {
     },
   })
 
-  // Automatically dismiss after duration
-  setTimeout(() => {
-    dismiss();
-  }, duration);
+  // We don't need to manually dismiss here since we already set
+  // the duration and onOpenChange properties on the toast
+  // which handles dismissal automatically through Radix UI
 
   return {
     id,
