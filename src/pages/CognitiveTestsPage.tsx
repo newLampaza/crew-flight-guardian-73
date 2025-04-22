@@ -32,8 +32,8 @@ const testConfig = [
     icon: <ActivitySquare className="h-5 w-5" />
   },
   {
-    id: "speed",
-    name: "Тест скорости",
+    id: "cognitive",
+    name: "Тест когнитивных способностей",
     description: "Оценка скорости обработки информации и принятия решений",
     duration: "3 минуты",
     icon: <Timer className="h-5 w-5" />
