@@ -63,7 +63,7 @@ const CognitiveTestsPage = () => {
     const fetchTestHistory = async () => {
       try {
         const history = await cognitiveTestsApi.getTestHistory();
-        setTestHistory(history);
+        setTestHistory(history || []);
       } catch (error) {
         console.error("Failed to fetch test history:", error);
         toast({
@@ -71,6 +71,7 @@ const CognitiveTestsPage = () => {
           description: "Не удалось загрузить историю тестов",
           variant: "destructive"
         });
+        setTestHistory([]);
       } finally {
         setIsLoading(false);
       }
@@ -81,6 +82,10 @@ const CognitiveTestsPage = () => {
   
   // Получить последний результат теста из истории
   const getLastResult = (testType: string) => {
+    if (!testHistory || !Array.isArray(testHistory) || testHistory.length === 0) {
+      return null;
+    }
+    
     const results = testHistory.filter(test => test.test_type === testType);
     if (results.length === 0) return null;
     
