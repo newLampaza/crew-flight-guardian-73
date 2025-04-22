@@ -151,6 +151,20 @@ CREATE TABLE IF NOT EXISTS TestSessions (
 )
 ''')
 
+# Feedback table for storing user feedback
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Feedback (
+    feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    entity_type TEXT CHECK(entity_type IN ('flight', 'cognitive_test', 'fatigue_analysis')) NOT NULL,
+    entity_id INTEGER NOT NULL,
+    rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+    comments TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
+)
+''')
+
 # Create trigger for flight duration calculation
 cursor.execute('''
 CREATE TRIGGER IF NOT EXISTS CalculateFlightDuration 
