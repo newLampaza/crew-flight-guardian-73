@@ -154,20 +154,29 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
+  // Automatically dismiss toast after delay
   const update = (props: ToasterToast) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
     })
+  
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+
+  // Add auto-dismiss timeout
+  setTimeout(() => {
+    dismiss();
+  }, props.duration || TOAST_REMOVE_DELAY);
 
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
+      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
+        if (props.onOpenChange) props.onOpenChange(open)
       },
     },
   })
