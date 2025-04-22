@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/toast"
 
 import { 
-  type ToastProps, 
-  type ToastActionProps 
+  type ToastProps
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
@@ -166,7 +165,6 @@ function toast({ ...props }: Toast) {
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
-      id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
