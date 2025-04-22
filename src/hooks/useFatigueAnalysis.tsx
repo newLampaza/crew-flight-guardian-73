@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
+import axios from 'axios';
 
 interface AnalysisResult {
   analysis_id?: number;
@@ -23,6 +24,27 @@ interface Flight {
   video_path?: string;
 }
 
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken") || localStorage.getItem("fatigue-guard-token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void) => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState({
@@ -31,6 +53,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
     percent: 0,
   });
 
+  // Использование форматирования даты с сервера, клиент только отображает
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -50,12 +73,6 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
         percent: 20,
       });
 
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       if (!blob || blob.size === 0) {
         throw new Error('Записанное видео слишком короткое или повреждено');
       }
@@ -63,46 +80,44 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
       const formData = new FormData();
       formData.append('video', blob, `recording_${Date.now()}.webm`);
 
-      // Имитация запроса к API в демонстрационных целях
-      // В реальном приложении здесь был бы настоящий запрос к API
-      // const response = await axios.post('/api/fatigue/analyze', formData);
-      
-      setAnalysisProgress({
-        loading: true,
-        message: 'Анализ нейросетью...',
-        percent: 80,
-      });
-  
-      // Имитация прогресса анализа
+      // Установка интервала для обновления прогресса (имитация)
       const interval = setInterval(() => {
         setAnalysisProgress(p => ({
           ...p,
           percent: Math.min(p.percent + 1, 95),
+          message: p.percent < 40 ? 'Загрузка на сервер...' : 'Анализ нейросетью...'
         }));
       }, 100);
-  
-      // Окончание анализа (имитация)
-      setTimeout(() => {
+
+      try {
+        // Реальный запрос к API для анализа
+        const response = await api.post('/api/fatigue/analyze', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setAnalysisProgress(p => ({
+                ...p,
+                percent: Math.min(40 + percentCompleted * 0.4, 95),
+              }));
+            }
+          },
+        });
+
         clearInterval(interval);
-        setAnalysisProgress(p => ({...p, percent: 100}));
-        setTimeout(() => {
-          setAnalysisProgress({loading: false, message: '', percent: 0});
-          
-          // Мок-данные результата анализа для демонстрации
-          const mockResult = {
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString()),
-            video_path: '/videos/test.mp4'
-          };
-          
-          setAnalysisResult(mockResult);
-          if (onSuccess) onSuccess(mockResult);
-          
-        }, 500);
-      }, 2000);
-      
+        setAnalysisProgress({ loading: false, message: '', percent: 0 });
+
+        if (response.data) {
+          // Используем данные, полученные с сервера
+          setAnalysisResult(response.data);
+          if (onSuccess) onSuccess(response.data);
+        }
+      } catch (error) {
+        clearInterval(interval);
+        throw error;
+      }
     } catch (error) {
       setAnalysisProgress({loading: false, message: '', percent: 0});
       toast({
@@ -115,58 +130,43 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
 
   const analyzeFlight = async (lastFlight?: Flight | null) => {
     try {
+      if (!lastFlight?.flight_id) {
+        throw new Error('Не указан ID рейса для анализа');
+      }
+
       setAnalysisProgress({
         loading: true,
-        message: 'Обработка видео...',
+        message: 'Отправка запроса...',
         percent: 20,
       });
 
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Имитация запроса к API
-      // В реальном приложении здесь был бы настоящий запрос к API
-      // const response = await axios.post('/api/fatigue/analyze-flight', { flight_id: lastFlight?.flight_id });
-
-      setAnalysisProgress({
-        loading: true,
-        message: 'Анализ нейросетью...',
-        percent: 80,
-      });
-
+      // Установка интервала для обновления прогресса (имитация)
       const interval = setInterval(() => {
         setAnalysisProgress(p => ({
           ...p,
           percent: Math.min(p.percent + 1, 95),
+          message: p.percent < 50 ? 'Поиск видео рейса...' : 'Анализ нейросетью...'
         }));
       }, 100);
 
-      setTimeout(() => {
-        clearInterval(interval);
-        setAnalysisProgress(p => ({...p, percent: 100}));
-        setTimeout(() => {
-          setAnalysisProgress({loading: false, message: '', percent: 0});
-          
-          // Мок-данные результата анализа для демонстрации
-          const mockResult = {
-            analysis_id: Math.floor(Math.random() * 1000) + 1,
-            fatigue_level: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
-            neural_network_score: Math.random(),
-            analysis_date: formatDate(new Date().toISOString()),
-            from_code: lastFlight?.from_code,
-            to_code: lastFlight?.to_code,
-            video_path: lastFlight?.video_path
-          };
-          
-          setAnalysisResult(mockResult);
-          if (onSuccess) onSuccess(mockResult);
-          
-        }, 500);
-      }, 2000);
+      try {
+        // Реальный запрос к API для анализа
+        const response = await api.post('/api/fatigue/analyze-flight', { 
+          flight_id: lastFlight.flight_id 
+        });
 
+        clearInterval(interval);
+        setAnalysisProgress({ loading: false, message: '', percent: 0 });
+
+        if (response.data) {
+          // Используем данные, полученные с сервера
+          setAnalysisResult(response.data);
+          if (onSuccess) onSuccess(response.data);
+        }
+      } catch (error) {
+        clearInterval(interval);
+        throw error;
+      }
     } catch (error) {
       setAnalysisProgress({loading: false, message: '', percent: 0});
       toast({
