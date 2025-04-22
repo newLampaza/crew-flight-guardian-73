@@ -35,12 +35,15 @@ export function useFeedback() {
       
       try {
         // The backend expects snake_case field names as seen in routes.py
-        const response = await axios.post(FEEDBACK_API, {
+        const requestData = {
           entity_type: feedback.entityType,
           entity_id: feedback.entityId,
           rating: feedback.rating,
           comments: feedback.comments
-        });
+        };
+        
+        console.log("Sending formatted data:", requestData);
+        const response = await axios.post(FEEDBACK_API, requestData);
         console.log("Success response:", response.data);
         return response.data;
       } catch (error) {
