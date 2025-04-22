@@ -31,23 +31,18 @@ export function useFeedback() {
   const submitFeedback = useMutation({
     mutationFn: async (feedback: FeedbackSubmission) => {
       console.log("Submitting feedback:", feedback);
-      
-      // Add additional debug info
       console.log("POST request to:", FEEDBACK_API);
       
       try {
-        // Структура должна точно соответствовать ожиданиям сервера из routes.py
-        const requestData = {
-          entityType: feedback.entityType,
-          entityId: feedback.entityId,
+        console.log("Formatted request data:", feedback);
+        const response = await axios.post(FEEDBACK_API, {
+          entity_type: feedback.entityType,
+          entity_id: feedback.entityId,
           rating: feedback.rating,
           comments: feedback.comments
-        };
-        
-        console.log("Formatted request data:", requestData);
-        const { data } = await axios.post(FEEDBACK_API, requestData);
-        console.log("Success response:", data);
-        return data;
+        });
+        console.log("Success response:", response.data);
+        return response.data;
       } catch (error) {
         console.error("POST request failed with error:", error);
         // Re-throw the error so it's handled by onError
