@@ -17,6 +17,8 @@ import {
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 5000
 
+type ToastVariant = "default" | "destructive" | "success" | "warning" | "info";
+
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
@@ -149,9 +151,10 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type ToastOptions = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+// Base toast function
+function toastFunction(options: ToastOptions) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -163,18 +166,17 @@ function toast({ ...props }: Toast) {
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   // Set default duration if not provided
-  const duration = props.duration || TOAST_REMOVE_DELAY;
+  const duration = options.duration || TOAST_REMOVE_DELAY;
 
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
-      ...props,
-      id,
+      ...options,
       open: true,
       duration: duration,
       onOpenChange: (open) => {
         if (!open) dismiss()
-        if (props.onOpenChange) props.onOpenChange(open)
+        if (options.onOpenChange) options.onOpenChange(open)
       },
     },
   })
@@ -191,6 +193,62 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Default toast duration in milliseconds
+const DEFAULT_DURATION = 5000;
+
+// Extended toast function with helper methods
+export const toast = Object.assign(toastFunction, {
+  // Standard toast
+  default(message: string, title?: string, duration = DEFAULT_DURATION) {
+    return toastFunction({
+      title,
+      description: message,
+      duration,
+      variant: "default",
+    });
+  },
+  
+  // Success toast
+  success(message: string, title?: string, duration = DEFAULT_DURATION) {
+    return toastFunction({
+      title: title || "Успешно",
+      description: message,
+      duration,
+      variant: "success",
+    });
+  },
+  
+  // Error toast
+  error(message: string, title?: string, duration = DEFAULT_DURATION) {
+    return toastFunction({
+      title: title || "Ошибка",
+      description: message,
+      duration,
+      variant: "destructive",
+    });
+  },
+  
+  // Warning toast
+  warning(message: string, title?: string, duration = DEFAULT_DURATION) {
+    return toastFunction({
+      title: title || "Предупреждение",
+      description: message,
+      duration,
+      variant: "warning",
+    });
+  },
+  
+  // Info toast
+  info(message: string, title?: string, duration = DEFAULT_DURATION) {
+    return toastFunction({
+      title: title || "Информация",
+      description: message,
+      duration,
+      variant: "info",
+    });
+  },
+});
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -206,9 +264,9 @@ function useToast() {
 
   return {
     ...state,
-    toast,
+    toast: toast,
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }
 }
 
-export { useToast, toast }
+export { useToast }
