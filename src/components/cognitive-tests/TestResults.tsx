@@ -1,22 +1,20 @@
-import React from 'react';
+import React from "react";
+import { TestResult } from "@/types/cognitivetests";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, AlertCircle, Clock, Brain, Calendar, Timer } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { TestResult } from "@/types/cognitivetests";
 
 interface TestResultsProps {
   result: TestResult;
   onClose?: () => void;
-  onRetry?: () => void;
 }
 
 export const TestResults: React.FC<TestResultsProps> = ({
   result,
-  onClose,
-  onRetry
+  onClose
 }) => {
   const formatDate = (dateString: string) => {
     try {
@@ -239,3 +237,5 @@ export const TestResults: React.FC<TestResultsProps> = ({
     </div>
   );
 };
+
+export default TestResults;
