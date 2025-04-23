@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,13 +76,7 @@ export const TestCard: React.FC<TestCardProps> = ({
     const diffMs = cooldownDate.getTime() - now.getTime();
     const diffMinutes = Math.ceil(diffMs / (1000 * 60));
     
-    if (diffMinutes < 60) {
-      return `${diffMinutes} мин.`;
-    } else {
-      const hours = Math.floor(diffMinutes / 60);
-      const minutes = diffMinutes % 60;
-      return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
-    }
+    return `${diffMinutes} мин.`;
   };
 
   const cooldownTime = lastResult?.cooldownEnd ? formatCooldownTime(lastResult.cooldownEnd) : null;
