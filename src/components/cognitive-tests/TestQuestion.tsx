@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,10 @@ import { TestQuestion } from '@/types/cognitivetests';
 interface TestQuestionProps {
   question: TestQuestion;
   onAnswer: (questionId: string, answer: string) => void;
+  disabled?: boolean;
 }
 
-const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer }) => {
+const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(true);
@@ -299,6 +301,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
               <Button 
                 onClick={handleSubmit} 
                 disabled={
+                  disabled ||
                   (question.multiple_select && selectedOptions.length === 0) || 
                   (!question.multiple_select && !selectedOption)
                 }
@@ -313,4 +316,4 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   );
 };
 
-export default TestQuestionComponent;
+export default TestQuestionComponent; // Changed to use default export

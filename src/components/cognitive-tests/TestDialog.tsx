@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TestProgress } from "./TestProgress";
-import { TestQuestion } from "./TestQuestion";
+import TestQuestion from "./TestQuestion"; // Changed from named import to default import
 import { TestResults } from "./TestResults";
 import { TestResult, TestQuestion as TestQuestionType } from "@/types/cognitivetests";
 
