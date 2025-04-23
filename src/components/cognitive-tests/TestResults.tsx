@@ -10,11 +10,13 @@ import { TestResult } from "@/types/cognitivetests";
 interface TestResultsProps {
   result: TestResult;
   onClose?: () => void;
+  onRetry?: () => void;
 }
 
 export const TestResults: React.FC<TestResultsProps> = ({
   result,
-  onClose
+  onClose,
+  onRetry
 }) => {
   const formatDate = (dateString: string) => {
     try {

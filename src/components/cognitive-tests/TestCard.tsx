@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,7 @@ export const TestCard: React.FC<TestCardProps> = ({
   const cooldownTime = lastResult?.cooldownEnd ? formatCooldownTime(lastResult.cooldownEnd) : null;
 
   if (mode === 'compact') {
-    const isLocked = lastResult?.inCooldown && cooldownTime;
+    const isLocked = lastResult?.inCooldown === true && Boolean(cooldownTime);
     return (
       <div className="relative">
         <Card className={`hover-card transition-all duration-300 animate-fade-in ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
@@ -126,7 +127,7 @@ export const TestCard: React.FC<TestCardProps> = ({
               </div>
             )}
             
-            {lastResult?.inCooldown && cooldownTime && (
+            {lastResult?.inCooldown === true && cooldownTime && (
               <div className="flex items-center justify-between text-amber-500">
                 <span className="flex items-center text-sm">
                   <Timer className="h-4 w-4 mr-1" /> 
@@ -176,7 +177,7 @@ export const TestCard: React.FC<TestCardProps> = ({
     );
   }
 
-  const isLocked = lastResult?.inCooldown && cooldownTime;
+  const isLocked = lastResult?.inCooldown === true && Boolean(cooldownTime);
   return (
     <div className="relative">
       <Card className={`hover-card transition-all duration-300 animate-fade-in ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
@@ -209,7 +210,7 @@ export const TestCard: React.FC<TestCardProps> = ({
               </div>
             </div>
           )}
-          {lastResult?.inCooldown && cooldownTime && (
+          {lastResult?.inCooldown === true && cooldownTime && (
             <div className="flex items-center justify-between mt-2 text-amber-500">
               <span className="flex items-center text-sm">
                 <Timer className="h-4 w-4 mr-1" />
