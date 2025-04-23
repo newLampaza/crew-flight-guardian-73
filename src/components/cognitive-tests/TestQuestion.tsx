@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,13 +11,20 @@ interface TestQuestionProps {
   disabled?: boolean;
 }
 
+const getSafeImageUrl = (imgUrl: string) => {
+  if (imgUrl?.includes('picsum.photos/id/')) {
+    return `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/300/200`;
+  }
+  return imgUrl;
+};
+
 const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [imageFallbacks, setImageFallbacks] = useState<Record<string, boolean>>({});
   
-  // Обработка вопросов с задержкой (для вопросов на запоминание)
   useEffect(() => {
     if (question.delay) {
       setShowAnswer(false);
@@ -40,30 +46,38 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     }
   }, [question]);
   
-  // Функция для обработки выбора опции в вопросах с множественным выбором
   const handleMultipleSelect = (option: string) => {
     setSelectedOptions(prev => {
-      // Если опция уже выбрана, удаляем ее
       if (prev.includes(option)) {
         return prev.filter(item => item !== option);
       }
-      // Иначе добавляем
       return [...prev, option];
     });
   };
   
-  // Отправка ответа
   const handleSubmit = () => {
     if (question.multiple_select) {
-      // Для вопросов с множественным выбором соединяем ответы через запятую
       onAnswer(question.id, selectedOptions.join(','));
     } else {
-      // Для вопросов с одиночным выбором
       onAnswer(question.id, selectedOption);
     }
   };
   
-  // Отображение разных типов вопросов
+  const handleImageError = (img: string) => {
+    console.error(`Ошибка загрузки изображения: ${img}`);
+    setImageFallbacks(prev => ({
+      ...prev,
+      [img]: true
+    }));
+  };
+  
+  const getImageSource = (img: string) => {
+    if (imageFallbacks[img]) {
+      return `https://picsum.photos/seed/${img.length}/300/200`;
+    }
+    return getSafeImageUrl(img);
+  };
+  
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
@@ -76,13 +90,10 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 onClick={() => setSelectedOption(img)}
               >
                 <img 
-                  src={img} 
+                  src={getImageSource(img)} 
                   alt={`Изображение ${index + 1}`} 
                   className="w-full h-auto"
-                  onError={(e) => {
-                    console.error(`Ошибка загрузки изображения: ${img}`);
-                    e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
-                  }}
+                  onError={() => handleImageError(img)}
                 />
               </div>
             ))}
@@ -98,13 +109,10 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             {question.image && (
               <div className="mb-4">
                 <img 
-                  src={question.image} 
+                  src={getImageSource(question.image)} 
                   alt="Вопрос" 
                   className="max-w-full h-auto mx-auto"
-                  onError={(e) => {
-                    console.error(`Ошибка загрузки изображения: ${question.image}`);
-                    e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
-                  }}
+                  onError={() => handleImageError(question.image || '')}
                 />
               </div>
             )}
@@ -125,7 +133,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         );
       
       case 'select':
-        // Вопрос с множественным выбором
         return (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-2">
@@ -194,13 +201,10 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                     onClick={() => setSelectedOption(img)}
                   >
                     <img 
-                      src={img} 
+                      src={getImageSource(img)} 
                       alt={`Изображение ${index + 1}`} 
                       className="w-full h-auto"
-                      onError={(e) => {
-                        console.error(`Ошибка загрузки изображения: ${img}`);
-                        e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
-                      }}
+                      onError={() => handleImageError(img)}
                     />
                   </div>
                 ))}
@@ -316,4 +320,4 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   );
 };
 
-export default TestQuestionComponent; // Changed to use default export
+export default TestQuestionComponent;
