@@ -64,8 +64,9 @@ export const cognitiveTestsApi = {
   // Проверить статус перезарядки теста
   checkTestCooldown: async (testType: string): Promise<{ in_cooldown: boolean, cooldown_end?: string }> => {
     try {
-      // Исправляем URL с '/api/tests/cooldown/' на '/api/cognitive-tests/cooldown/'
-      const response = await apiClient.get(`/cognitive-tests/cooldown/${testType}`);
+      // Исправляем URL с '/api/tests/cooldown/' на '/tests/cooldown/'
+      // API base уже содержит '/api', поэтому нам не нужно его дублировать
+      const response = await apiClient.get(`/tests/cooldown/${testType}`);
       return response.data;
     } catch (error) {
       console.error('Ошибка при проверке перезарядки теста:', error);

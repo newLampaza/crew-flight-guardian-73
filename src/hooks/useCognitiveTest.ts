@@ -47,6 +47,16 @@ export const useCognitiveTest = () => {
 
       // Проверяем период перезарядки теста
       try {
+        // Прежде чем делать запрос к API, убедимся что testId действителен
+        if (!testId) {
+          toast({
+            title: "Ошибка",
+            description: "Недействительный ID теста",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         const cooldownCheck = await cognitiveTestsApi.checkTestCooldown(testId);
         if (cooldownCheck.in_cooldown) {
           const cooldownEnd = new Date(cooldownCheck.cooldown_end as string);
@@ -63,6 +73,12 @@ export const useCognitiveTest = () => {
       } catch (cooldownError) {
         console.error("Ошибка при проверке перезарядки:", cooldownError);
         // Продолжаем, так как это не критическая ошибка для запуска теста
+        // Но уведомляем пользователя
+        toast({
+          title: "Предупреждение",
+          description: "Не удалось проверить перезарядку теста. Продолжаем запуск.",
+          variant: "warning"
+        });
       }
 
       setIsLoading(true);

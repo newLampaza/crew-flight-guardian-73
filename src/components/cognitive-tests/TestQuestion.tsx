@@ -1,517 +1,210 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { TestQuestion as TestQuestionType } from "@/types/cognitivetests";
-import { motion, AnimatePresence } from "framer-motion";
+import { Label } from "@/components/ui/label";
+import { TestQuestion } from '@/types/cognitivetests';
 
 interface TestQuestionProps {
-  question: TestQuestionType;
+  question: TestQuestion;
   onAnswer: (questionId: string, answer: string) => void;
-  disabled?: boolean;
 }
 
-export const TestQuestion: React.FC<TestQuestionProps> = ({
-  question,
-  onAnswer,
-  disabled = false
-}) => {
-  const [answer, setAnswer] = useState<string>('');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [showOptions, setShowOptions] = useState(true);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [showStimulus, setShowStimulus] = useState(false);
-  const [currentStimulus, setCurrentStimulus] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState<number | null>(null);
-
+const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer }) => {
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [showAnswer, setShowAnswer] = useState(true);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  
+  // Обработка вопросов с задержкой (для вопросов на запоминание)
   useEffect(() => {
-    // Сбрасываем состояние при смене вопроса
-    setAnswer('');
-    setSelectedItems([]);
-    setShowOptions(true);
-    setShowStimulus(false);
-    setCurrentStimulus(null);
-    setStartTime(null);
-    
-    // Обрабатываем задержку, если она указана
-    if (question.delay && question.delay > 0) {
-      if (question.type === 'sequence' || question.type === 'words' || 
-          question.type === 'images' || question.type === 'pairs' || 
-          question.type === 'matrix' || question.type === 'grid') {
-        // Вопросы на память: показываем, затем скрываем
-        setShowOptions(true);
-        setCountdown(Math.round(question.delay));
-        
-        const timer = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev === null || prev <= 1) {
-              clearInterval(timer);
-              setShowOptions(false);
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        return () => clearInterval(timer);
-      } 
-      else if (question.type.includes('reaction') || question.type === 'quick_choice' || 
-               question.type === 'go_nogo' || question.type === 'choice_reaction' || 
-               question.type === 'reaction_chain' || question.type === 'multi_target') {
-        // Вопросы на реакцию: скрываем, затем показываем
-        setShowOptions(false);
-        
-        const delayMs = question.delay * 1000;
-        const randomDelay = delayMs + Math.random() * 500; // Добавляем случайность
-        
-        const timer = setTimeout(() => {
-          setShowStimulus(true);
-          setStartTime(Date.now());
-          
-          if (Array.isArray(question.stimulus)) {
-            setCurrentStimulus(question.stimulus[Math.floor(Math.random() * question.stimulus.length)]);
-          } else {
-            setCurrentStimulus(question.stimulus as string);
+    if (question.delay) {
+      setShowAnswer(false);
+      setTimeLeft(question.delay);
+      
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(timer);
+            setShowAnswer(true);
+            return null;
           }
-        }, randomDelay);
-        
-        return () => clearTimeout(timer);
-      }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(timer);
     }
   }, [question]);
-
-  const handleSingleOptionSelect = (value: string) => {
-    setAnswer(value);
-  };
-
-  const handleMultipleOptionSelect = (value: string) => {
-    setSelectedItems((prev) => {
-      if (prev.includes(value)) {
-        return prev.filter(item => item !== value);
-      } else {
-        return [...prev, value];
+  
+  // Функция для обработки выбора опции в вопросах с множественным выбором
+  const handleMultipleSelect = (option: string) => {
+    setSelectedOptions(prev => {
+      // Если опция уже выбрана, удаляем ее
+      if (prev.includes(option)) {
+        return prev.filter(item => item !== option);
       }
+      // Иначе добавляем
+      return [...prev, option];
     });
   };
-
-  const handleReactionClick = () => {
-    if (!startTime) return;
-    
-    const reactionTime = Date.now() - startTime;
-    const answerValue = `click:${reactionTime}`;
-    onAnswer(question.id, answerValue);
-  };
-
-  const handleChoiceReaction = (choice: string) => {
-    if (!startTime || !currentStimulus) return;
-    
-    const reactionTime = Date.now() - startTime;
-    const answerValue = `${currentStimulus}:${choice}:${reactionTime}`;
-    onAnswer(question.id, answerValue);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAnswer(e.target.value);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (question.type === 'select' || question.type === 'words' || 
-        question.type === 'images' || question.type === 'pairs' || 
-        question.type === 'multi_target' || question.multiple_select) {
-      onAnswer(question.id, selectedItems.join(','));
+  
+  // Отправка ответа
+  const handleSubmit = () => {
+    if (question.multiple_select) {
+      // Для вопросов с множественным выбором соединяем ответы через запятую
+      onAnswer(question.id, selectedOptions.join(','));
     } else {
-      onAnswer(question.id, answer);
+      // Для вопросов с одиночным выбором
+      onAnswer(question.id, selectedOption);
     }
   };
-
+  
+  // Отображение разных типов вопросов
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
-      case 'pattern':
-      case 'math':
-      case 'verbal':
-      case 'logic':
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            {question.options?.map((img, index) => (
+              <div 
+                key={index} 
+                className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
+                onClick={() => setSelectedOption(img)}
+              >
+                <img 
+                  src={img} 
+                  alt={`Изображение ${index + 1}`} 
+                  className="w-full h-auto"
+                  onError={(e) => {
+                    console.error(`Ошибка загрузки изображения: ${img}`);
+                    e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        );
+        
       case 'count':
+      case 'pattern':
+      case 'logic':
+      case 'math':
         return (
           <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
             {question.image && (
-              <div className="flex justify-center my-4">
-                <motion.img 
-                  src={question.image.replace('https://i.imgur.com', 'https://picsum.photos')} 
+              <div className="mb-4">
+                <img 
+                  src={question.image} 
                   alt="Вопрос" 
-                  className="max-w-full max-h-64 rounded-md shadow-md" 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
+                  className="max-w-full h-auto mx-auto"
+                  onError={(e) => {
+                    console.error(`Ошибка загрузки изображения: ${question.image}`);
+                    e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
+                  }}
                 />
               </div>
             )}
             
-            <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-              <AnimatePresence>
-                {question.options?.map((option, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                  >
-                    <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
-                    <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">
-                      {option.startsWith('http') ? 
-                        <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                        option
-                      }
-                    </Label>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </RadioGroup>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {question.options?.map((option, index) => (
+                <Button
+                  key={index}
+                  variant={selectedOption === option ? "default" : "outline"}
+                  className="justify-start h-auto py-2"
+                  onClick={() => setSelectedOption(option)}
+                >
+                  {option}
+                </Button>
+              ))}
+            </div>
           </div>
         );
       
       case 'select':
+        // Вопрос с множественным выбором
         return (
           <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {question.image && (
-              <div className="flex justify-center my-4">
-                <motion.img 
-                  src={question.image.replace('https://i.imgur.com', 'https://picsum.photos')} 
-                  alt="Вопрос" 
-                  className="max-w-full max-h-64 rounded-md shadow-md" 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
-            )}
-            
-            {/* Используем чекбоксы для выбора нескольких вариантов, если multiple_select=true */}
-            {question.multiple_select ? (
-              <div className="space-y-2">
-                <p className="font-medium">Выберите все подходящие варианты:</p>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Checkbox 
-                        id={`multi-select-${index}`} 
-                        checked={selectedItems.includes(option)}
-                        onCheckedChange={() => handleMultipleOptionSelect(option)}
-                        disabled={disabled}
-                      />
-                      <label htmlFor={`multi-select-${index}`} className="cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                          option
-                        }
-                      </label>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+            <div className="grid grid-cols-1 gap-2">
+              {question.options?.map((option, index) => (
+                <div className="flex items-center space-x-2" key={index}>
+                  <Checkbox 
+                    id={`option-${index}`}
+                    checked={selectedOptions.includes(option)}
+                    onCheckedChange={() => handleMultipleSelect(option)}
+                  />
+                  <Label htmlFor={`option-${index}`}>{option}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      
+      case 'sequence':
+        return (
+          <div className="text-center py-8">
+            {showAnswer ? (
+              <input
+                type="text"
+                placeholder="Введите последовательность"
+                className="border-2 border-gray-300 p-2 rounded-md w-full max-w-xs"
+                value={selectedOption}
+                onChange={(e) => setSelectedOption(e.target.value)}
+              />
             ) : (
-              <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
-                      <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
-                          option
-                        }
-                      </Label>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </RadioGroup>
+              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
         
       case 'words':
+        return (
+          <div className="space-y-4">
+            {showAnswer ? (
+              <div className="grid grid-cols-2 gap-2">
+                {question.options?.map((option, index) => (
+                  <Button
+                    key={index}
+                    variant={selectedOption === option ? "default" : "outline"}
+                    className="justify-start h-auto py-2"
+                    onClick={() => setSelectedOption(option)}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-2xl font-bold">Запоминайте...</p>
+            )}
+          </div>
+        );
+        
       case 'images':
         return (
           <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showOptions ? (
-              <motion.div 
-                className="p-4 border rounded-md bg-accent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                {countdown !== null && (
-                  <div className="text-right text-sm flex items-center justify-end">
-                    <span>Осталось секунд:</span>
-                    <motion.div 
-                      key={countdown}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-2 px-2 py-1 bg-primary text-primary-foreground rounded-md font-bold"
-                    >
-                      {countdown}
-                    </motion.div>
+            {showAnswer ? (
+              <div className="grid grid-cols-2 gap-4">
+                {question.options?.map((img, index) => (
+                  <div 
+                    key={index} 
+                    className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
+                    onClick={() => setSelectedOption(img)}
+                  >
+                    <img 
+                      src={img} 
+                      alt={`Изображение ${index + 1}`} 
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        console.error(`Ошибка загрузки изображения: ${img}`);
+                        e.currentTarget.src = "https://picsum.photos/300/200"; // Запасное изображение
+                      }}
+                    />
                   </div>
-                )}
-                <div className="flex flex-wrap gap-2 justify-center my-4">
-                  {question.type === 'words' ? 
-                    question.question.split(': ')[1].split(', ').map((word, i) => (
-                      <motion.div 
-                        key={i} 
-                        className="p-2 border rounded bg-background shadow-sm"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: i * 0.1 }}
-                      >
-                        {word}
-                      </motion.div>
-                    )) :
-                    question.images?.map((img, i) => (
-                      <motion.div 
-                        key={i} 
-                        className="p-2 border rounded bg-background shadow-sm text-2xl"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: i * 0.1 }}
-                      >
-                        {img.startsWith('http') ? 
-                          <img src={img.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Изображение ${i+1}`} className="max-w-36 max-h-36" /> : 
-                          img
-                        }
-                      </motion.div>
-                    ))
-                  }
-                </div>
-              </motion.div>
+                ))}
+              </div>
             ) : (
-              <motion.div 
-                className="space-y-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p className="font-medium">Выберите все элементы, которые были показаны:</p>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Checkbox 
-                        id={`check-${index}`} 
-                        checked={selectedItems.includes(option)}
-                        onCheckedChange={() => handleMultipleOptionSelect(option)}
-                        disabled={disabled}
-                      />
-                      <label htmlFor={`check-${index}`} className="text-sm font-medium cursor-pointer w-full">
-                        {option.startsWith('http') ? 
-                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36" /> : 
-                          option
-                        }
-                      </label>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </div>
-        );
-        
-      case 'sequence':
-        return (
-          <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showOptions ? (
-              <motion.div 
-                className="p-4 border rounded-md bg-accent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                {countdown !== null && (
-                  <div className="text-right text-sm flex items-center justify-end">
-                    <span>Осталось секунд:</span>
-                    <motion.div 
-                      key={countdown}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-2 px-2 py-1 bg-primary text-primary-foreground rounded-md font-bold"
-                    >
-                      {countdown}
-                    </motion.div>
-                  </div>
-                )}
-                <div className="flex justify-center my-4">
-                  <motion.div 
-                    className="text-center text-2xl font-bold tracking-wider bg-background p-6 rounded-lg shadow-sm"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {question.question.split(': ')[1]}
-                  </motion.div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                className="space-y-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p className="font-medium">Введите последовательность, которую вы запомнили:</p>
-                <Input 
-                  type="text" 
-                  placeholder="Введите ответ"
-                  value={answer}
-                  onChange={handleInputChange}
-                  disabled={disabled}
-                  className="text-lg py-6 text-center font-medium"
-                />
-              </motion.div>
-            )}
-          </div>
-        );
-        
-      case 'quick_choice':
-      case 'go_nogo':
-        return (
-          <div className="space-y-4 text-center">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showStimulus && (
-              <motion.div 
-                className="flex items-center justify-center h-32 cursor-pointer"
-                onClick={handleReactionClick}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {currentStimulus === 'red_circle' && (
-                  <div className="w-20 h-20 bg-red-500 rounded-full"></div>
-                )}
-                {currentStimulus === 'green_circle' && (
-                  <div className="w-20 h-20 bg-green-500 rounded-full"></div>
-                )}
-                {currentStimulus === 'X' && (
-                  <div className="text-5xl font-bold">X</div>
-                )}
-                {currentStimulus === 'Y' && (
-                  <div className="text-5xl font-bold">Y</div>
-                )}
-                {(currentStimulus === '1' || currentStimulus === '2' || currentStimulus === '3') && (
-                  <div className="text-5xl font-bold">{currentStimulus}</div>
-                )}
-                {currentStimulus === 'red_square' && (
-                  <div className="w-20 h-20 bg-red-500"></div>
-                )}
-                {currentStimulus === 'red_triangle' && (
-                  <div className="w-0 h-0 border-l-[40px] border-r-[40px] border-b-[70px] border-transparent border-b-red-500"></div>
-                )}
-                {currentStimulus === 'blue_square' && (
-                  <div className="w-20 h-20 bg-blue-500"></div>
-                )}
-              </motion.div>
-            )}
-            
-            {!showStimulus && !showOptions && (
-              <motion.div 
-                className="p-4 border rounded animate-pulse"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p>Ожидание... будьте готовы нажать при появлении стимула</p>
-              </motion.div>
-            )}
-          </div>
-        );
-        
-      case 'choice_reaction':
-        return (
-          <div className="space-y-4 text-center">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showStimulus && (
-              <motion.div 
-                className="flex flex-col items-center justify-center space-y-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div 
-                  className="flex items-center justify-center h-32"
-                  initial={{ scale: 0.5 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {currentStimulus === 'red_circle' && (
-                    <div className="w-20 h-20 bg-red-500 rounded-full"></div>
-                  )}
-                  {currentStimulus === 'green_circle' && (
-                    <div className="w-20 h-20 bg-green-500 rounded-full"></div>
-                  )}
-                </motion.div>
-                
-                <div className="flex space-x-4">
-                  <Button 
-                    onClick={() => handleChoiceReaction('left')}
-                    variant="outline"
-                    disabled={disabled}
-                    className="hover:scale-105 transition-transform"
-                  >
-                    Левая
-                  </Button>
-                  <Button 
-                    onClick={() => handleChoiceReaction('right')}
-                    variant="outline"
-                    disabled={disabled}
-                    className="hover:scale-105 transition-transform"
-                  >
-                    Правая
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-            
-            {!showStimulus && (
-              <motion.div 
-                className="p-4 border rounded animate-pulse"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p>Ожидание... будьте готовы выбрать правильную кнопку</p>
-              </motion.div>
+              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
@@ -519,303 +212,105 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
       case 'pairs':
         return (
           <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showOptions ? (
-              <motion.div 
-                className="p-4 border rounded-md bg-accent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                {countdown !== null && (
-                  <div className="text-right text-sm flex items-center justify-end">
-                    <span>Осталось секунд:</span>
-                    <motion.div 
-                      key={countdown}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-2 px-2 py-1 bg-primary text-primary-foreground rounded-md font-bold"
+            {showAnswer ? (
+              <div className="grid grid-cols-2 gap-2">
+                {question.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <Label htmlFor={`option-${index}`}>{option}</Label>
+                    <select
+                      id={`option-${index}`}
+                      className="border-2 border-gray-300 p-2 rounded-md"
+                      value={selectedOption}
+                      onChange={(e) => setSelectedOption(e.target.value)}
                     >
-                      {countdown}
-                    </motion.div>
+                      <option value="">Выберите...</option>
+                      {question.answer_options?.map((answer, i) => (
+                        <option key={i} value={answer}>{answer}</option>
+                      ))}
+                    </select>
                   </div>
-                )}
-                <div className="grid grid-cols-2 gap-2 my-4">
-                  {question.question.split(': ')[1].split(', ').map((pair, i) => (
-                    <motion.div 
-                      key={i} 
-                      className="p-2 border rounded bg-background text-center"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: i * 0.1 }}
-                    >
-                      {pair}
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+                ))}
+              </div>
             ) : (
-              <motion.div 
-                className="space-y-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p className="font-medium">Укажите пары для каждой буквы:</p>
-                <AnimatePresence>
-                  {question.options?.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 py-2"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <div className="w-1/4 font-medium">{option}</div>
-                      <RadioGroup 
-                        value={selectedItems[index]?.split('-')[1] || ''}
-                        onValueChange={(val) => {
-                          const letter = option.split('-')[0];
-                          setSelectedItems(prev => {
-                            const newItems = [...prev];
-                            newItems[index] = `${letter}-${val}`;
-                            return newItems;
-                          });
-                        }}
-                        className="flex space-x-2"
-                      >
-                        {question.answer_options?.map((ans, i) => (
-                          <div key={i} className="flex items-center space-x-1">
-                            <RadioGroupItem value={ans} id={`ans-${index}-${i}`} disabled={disabled} />
-                            <Label htmlFor={`ans-${index}-${i}`}>{ans}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
+              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
         
-      case 'grid':
       case 'matrix':
         return (
           <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            {showOptions ? (
-              <motion.div 
-                className="p-4 border rounded-md bg-accent"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                {countdown !== null && (
-                  <div className="text-right text-sm flex items-center justify-end">
-                    <span>Осталось секунд:</span>
-                    <motion.div 
-                      key={countdown}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-2 px-2 py-1 bg-primary text-primary-foreground rounded-md font-bold"
-                    >
-                      {countdown}
-                    </motion.div>
-                  </div>
+            {showAnswer ? (
+              <>
+                {question.question_text && (
+                  <p className="text-lg">{question.question_text}</p>
                 )}
-                <div className="flex justify-center my-4">
-                  <div className="grid grid-cols-3 gap-1">
-                    {question.type === 'grid' 
-                      ? question.grid?.map((row, rowIndex) => (
-                          row.map((cell, colIndex) => (
-                            <motion.div 
-                              key={`${rowIndex}-${colIndex}`} 
-                              className="w-12 h-12 flex items-center justify-center border bg-background text-lg shadow-sm"
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.3, delay: (rowIndex * 3 + colIndex) * 0.05 }}
-                            >
-                              {cell}
-                            </motion.div>
-                          ))
-                        ))
-                      : question.matrix?.map((row, rowIndex) => (
-                          row.map((cell, colIndex) => (
-                            <motion.div 
-                              key={`${rowIndex}-${colIndex}`} 
-                              className="w-12 h-12 flex items-center justify-center border bg-background text-lg shadow-sm"
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.3, delay: (rowIndex * 3 + colIndex) * 0.05 }}
-                            >
-                              {cell}
-                            </motion.div>
-                          ))
-                        ))
-                    }
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                className="space-y-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <p className="font-medium">{question.question_text}</p>
-                <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-                  <div className="grid grid-cols-3 gap-2">
-                    <AnimatePresence>
-                      {question.options?.map((option, index) => (
-                        <motion.div 
-                          key={index} 
-                          className="flex items-center space-x-2"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                        >
-                          <RadioGroupItem value={option} id={`grid-option-${index}`} disabled={disabled} />
-                          <Label htmlFor={`grid-option-${index}`}>{option}</Label>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                </RadioGroup>
-              </motion.div>
-            )}
-          </div>
-        );
-        
-      case 'spatial':
-        return (
-          <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            
-            <motion.div 
-              className="flex justify-center my-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <img src={question.image?.replace('https://i.imgur.com', 'https://picsum.photos')} alt="Вопрос" className="max-w-full max-h-40 rounded-md shadow-md" />
-            </motion.div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <AnimatePresence>
-                {question.options?.map((option, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="flex flex-col items-center"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                  >
-                    <img 
-                      src={option.replace('https://i.imgur.com', 'https://picsum.photos')} 
-                      alt={`Вариант ${index+1}`} 
-                      className={`max-w-28 max-h-28 mb-2 rounded-md transition-all ${answer === option ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}`} 
-                    />
-                    <RadioGroup value={answer} onValueChange={handleSingleOptionSelect} className="flex justify-center">
-                      <RadioGroupItem value={option} id={`spatial-option-${index}`} disabled={disabled} />
-                    </RadioGroup>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
-        );
-    
-      default:
-        return (
-          <div className="space-y-4">
-            <CardDescription>{question.question}</CardDescription>
-            {question.options && (
-              <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
-                <AnimatePresence>
-                  {question.options.map((option, index) => (
-                    <motion.div 
-                      key={index} 
-                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
-                      <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">{option}</Label>
-                    </motion.div>
+                <div className="grid grid-cols-3 gap-2">
+                  {question.matrix?.map((row, rowIndex) => (
+                    row.map((cell, cellIndex) => (
+                      <div
+                        key={`${rowIndex}-${cellIndex}`}
+                        className="border-2 border-gray-300 p-2 text-center"
+                      >
+                        {cell}
+                      </div>
+                    ))
                   ))}
-                </AnimatePresence>
-              </RadioGroup>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  {question.options?.map((option, index) => (
+                    <Button
+                      key={index}
+                      variant={selectedOption === option ? "default" : "outline"}
+                      className="justify-start h-auto py-2"
+                      onClick={() => setSelectedOption(option)}
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
+      
+      default:
+        return <div>Неизвестный тип вопроса</div>;
     }
   };
   
-  // Определяем, нужно ли показывать кнопку "Ответить"
-  const showSubmitButton = () => {
-    // Для реакционных тестов кнопка не нужна
-    if (question.type.includes('reaction') || 
-        question.type === 'quick_choice' || 
-        question.type === 'go_nogo' || 
-        question.type === 'choice_reaction') {
-      return false;
-    }
-    
-    // Для тестов на память не показываем кнопку во время отображения элементов
-    if ((question.type === 'sequence' || 
-         question.type === 'words' || 
-         question.type === 'images' || 
-         question.type === 'pairs' || 
-         question.type === 'matrix' || 
-         question.type === 'grid') && showOptions) {
-      return false;
-    }
-    
-    return true;
-  };
-
   return (
-    <Card className="animate-fade-in">
-      <CardHeader>
-        <CardTitle>
-          {question.type === 'sequence' && showOptions 
-            ? "Запомните последовательность" 
-            : question.type === 'words' && showOptions
-            ? "Запомните слова"
-            : question.type === 'images' && showOptions
-            ? "Запомните изображения"
-            : question.type === 'pairs' && showOptions
-            ? "Запомните пары"
-            : "Вопрос"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {renderQuestionContent()}
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardContent className="pt-6">
+        <h2 className="text-xl font-semibold mb-4">{question.question}</h2>
         
-        {showSubmitButton() && (
-          <motion.div 
-            className="mt-4 flex justify-end"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Button 
-              onClick={handleSubmitAnswer} 
-              disabled={disabled}
-              className="hover:scale-105 transition-transform"
-            >
-              Ответить
-            </Button>
-          </motion.div>
+        {timeLeft !== null ? (
+          <div className="text-center py-8">
+            <p className="text-2xl font-bold mb-2">Запоминайте...</p>
+            <p className="text-lg">Осталось {timeLeft} секунд</p>
+          </div>
+        ) : (
+          <>
+            {renderQuestionContent()}
+            
+            <div className="mt-6 flex justify-end">
+              <Button 
+                onClick={handleSubmit} 
+                disabled={
+                  (question.multiple_select && selectedOptions.length === 0) || 
+                  (!question.multiple_select && !selectedOption)
+                }
+              >
+                Ответить
+              </Button>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
   );
 };
+
+export default TestQuestionComponent;

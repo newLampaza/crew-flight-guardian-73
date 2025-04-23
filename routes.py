@@ -214,7 +214,7 @@ def refresh_token():
 def get_user_profile(current_user):
     try:
         conn = get_db_connection()
-        # Получаем полную и��формацию о пользователе
+        # Получаем полную и��формацию о ��ользователе
         user_data = conn.execute('''
             SELECT u.*, e.name, e.role, e.position, e.image_url 
             FROM Users u
@@ -259,17 +259,17 @@ def generate_test_questions(test_type):
                 'type': 'difference',
                 'question': 'Найдите отличия между изображениями',
                 'options': [
-                    'https://i.imgur.com/3JYQZ7A.png',
-                    'https://i.imgur.com/5T7v8dR.png'
+                    'https://picsum.photos/id/237/300/200',
+                    'https://picsum.photos/id/238/300/200'
                 ],
-                'correct_answer': 'https://i.imgur.com/5T7v8dR.png'
+                'correct_answer': 'https://picsum.photos/id/238/300/200'
             },
             {
                 'id': str(uuid.uuid4()),
                 'type': 'count',
                 'question': 'Сколько треугольников на изображении?',
                 'options': ['4', '5', '6', '7'],
-                'image': 'https://i.imgur.com/ZG8C9H1.png',
+                'image': 'https://picsum.photos/id/239/300/200',
                 'correct_answer': '6'
             },
             {
@@ -277,7 +277,8 @@ def generate_test_questions(test_type):
                 'type': 'select',
                 'question': 'Выберите все красные объекты',
                 'options': ['Яблоко', 'Банан', 'Клубника', 'Лимон', 'Вишня'],
-                'correct_answer': 'Яблоко,Клубника,Вишня'
+                'correct_answer': 'Яблоко,Клубника,Вишня',
+                'multiple_select': true
             },
             {
                 'id': str(uuid.uuid4()),
@@ -1093,7 +1094,7 @@ def get_test_results(current_user, test_id):
         })
 
     except Exception as e:
-        app.logger.error(f"Get test results error: {traceback.format_exc()}")
+        app.logger.error(f"Get test results error: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -1545,6 +1546,50 @@ def handle_feedback(current_user):
         finally:
             if 'conn' in locals():
                 conn.close()
+
+@app.route('/api/tests/cooldown/<string:test_type>', methods=['GET'])
+@token_required
+def check_test_cooldown(current_user, test_type):
+    """Проверка времени перезарядки теста"""
+    conn = get_db_connection()
+    try:
+        last_test = conn.execute('''
+            SELECT test_date 
+            FROM CognitiveTests 
+            WHERE employee_id = ? 
+              AND test_type = ?
+            ORDER BY test_date DESC 
+            LIMIT 1
+        ''', (current_user['employee_id'], test_type)).fetchone()
+        
+        if not last_test:
+            return jsonify({'in_cooldown': False})
+            
+        # Проверяем прошло ли достаточно времени (например, 10 минут для тестирования)
+        last_time = datetime.fromisoformat(last_test['test_date'])
+        cooldown_seconds = 600  # 10 минут
+        now = datetime.now()
+        
+        if (now - last_time).total_seconds() < cooldown_seconds:
+            cooldown_end = last_time + timedelta(seconds=cooldown_seconds)
+            return jsonify({
+                'in_cooldown': True,
+                'cooldown_end': cooldown_end.isoformat()
+            })
+        
+        return jsonify({'in_cooldown': False})
+        
+    except Exception as e:
+        app.logger.error(f"Error in test cooldown check: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/cognitive-tests/cooldown/<string:test_type>', methods=['GET'])
+@token_required
+def check_cognitive_test_cooldown(current_user, test_type):
+    """Алиас для проверки времени перезарядки теста - для обратной совместимости с клиентом"""
+    return check_test_cooldown(current_user, test_type)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

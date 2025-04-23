@@ -1,4 +1,3 @@
-
 export interface TestHistory {
   test_id: number;
   test_date: string;
@@ -24,7 +23,7 @@ export interface TestQuestion {
   answer_options?: string[];
   question_text?: string;
   animation?: string;
-  multiple_select?: boolean; // Добавляем возможность множественного выбора
+  multiple_select?: boolean; // Флаг для вопросов с множественным выбором
 }
 
 export interface TestSession {
