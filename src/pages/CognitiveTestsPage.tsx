@@ -111,6 +111,10 @@ const CognitiveTestsPage = () => {
     }
   };
 
+  const handleViewResultDetails = async (testId: string) => {
+    await viewTestDetails(testId);
+  };
+
   const renderAvailableTests = () => {
     if (historyLoading) {
       return (
@@ -153,7 +157,7 @@ const CognitiveTestsPage = () => {
             lastResult={getLastResult(test.id)}
             icon={test.icon}
             onStartTest={startTest}
-            onViewResults={viewTestDetails}
+            onViewResults={handleViewResultDetails}
             showResultsButton={false}
           />
         ))}
@@ -220,7 +224,7 @@ const CognitiveTestsPage = () => {
               lastResult={getLastResult(test.id)}
               icon={test.icon}
               onStartTest={startTest}
-              onViewResults={viewTestDetails}
+              onViewResults={handleViewResultDetails}
               mode='compact'
             />
           ))}
@@ -289,6 +293,7 @@ const CognitiveTestsPage = () => {
         isOpen={showResultDetails}
         testResults={selectedTestResults}
         onClose={() => setShowResultDetails(false)}
+        onRetry={selectedTestResults ? () => handleRetryTest(selectedTestResults.test_type) : undefined}
       />
     </div>
   );

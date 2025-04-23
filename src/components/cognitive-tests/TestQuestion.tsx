@@ -21,26 +21,49 @@ const UNSPLASH_IMAGES = [
   "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&auto=format&fit=crop&q=60",
   "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&auto=format&fit=crop&q=60",
   "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=400&auto=format&fit=crop&q=60",
 ];
 
-// Плейсхолдер для изображений если нет доступа к Yandex
-const fallbackImageUrl = "https://placekitten.com/400/300";
+// Плейсхолдер для изображений если нет доступа к внешним ресурсам
+const fallbackImageUrl = "https://via.placeholder.com/400x300?text=Изображение";
 
-// Возвращает настоящую фотографию из Unsplash, если источник picsum или невалидный
+// Проверяем тип строки - является ли она эмодзи
+const isEmoji = (str: string) => {
+  const regex = /\p{Emoji}/u;
+  return regex.test(str);
+};
+
+// Возвращает настоящую фотографию из Unsplash если источник невалидный
 const getSafeImageUrl = (imgUrl: string) => {
-  // Проверяем, является ли URL эмодзи или строкой без http/https
-  if (!imgUrl || imgUrl.match(/^\p{Emoji}/u) || !imgUrl.match(/^https?:\/\//i)) {
-    // Случайная фотография из массива реальных
+  // Проверяем, является ли URL эмодзи
+  if (!imgUrl) {
+    return fallbackImageUrl;
+  }
+  
+  if (isEmoji(imgUrl)) {
+    // Для эмодзи используем случайное изображение
     const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
     return UNSPLASH_IMAGES[rand];
   }
-  // Проверяем на picsum
-  if (imgUrl.includes('picsum.photos')) {
+  
+  // Проверяем на валидный URL
+  try {
+    new URL(imgUrl);
+    // Проверяем на picsum или другие ненадежные источники
+    if (imgUrl.includes('picsum.photos') || 
+        imgUrl.includes('yastatic.net') ||
+        !imgUrl.match(/^https?:\/\//i)) {
+      const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
+      return UNSPLASH_IMAGES[rand];
+    }
+    return imgUrl;
+  } catch (e) {
+    // Не валидный URL, возвращаем заглушку
     const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
     return UNSPLASH_IMAGES[rand];
   }
-  // если урл выглядит валидным — отдаём его как есть
-  return imgUrl;
 };
 
 const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
@@ -75,6 +98,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   useEffect(() => {
     setSelectedOption('');
     setSelectedOptions([]);
+    setImageFallbacks({});
   }, [question.id]);
 
   const handleMultipleSelect = (option: string) => {
@@ -88,7 +112,9 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 
   const handleSubmit = () => {
     if (question.multiple_select) {
-      onAnswer(question.id, selectedOptions.join(','));
+      // Сортируем выбранные опции, чтобы обеспечить стабильность ответа
+      const sortedOptions = [...selectedOptions].sort();
+      onAnswer(question.id, sortedOptions.join(','));
     } else {
       onAnswer(question.id, selectedOption);
     }
@@ -123,7 +149,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     // Проверка на поддерживаемый тип вопроса
     if (!isSupportedQuestionType()) {
       return (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Неизвестный тип вопроса: {question.type}. Свяжитесь с администратором.
@@ -196,7 +222,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                     checked={selectedOptions.includes(option)}
                     onCheckedChange={() => handleMultipleSelect(option)}
                   />
-                  <Label htmlFor={`option-${index}`}>{option}</Label>
+                  <Label htmlFor={`option-${index}`} className="cursor-pointer">{option}</Label>
                 </div>
               ))}
             </div>
@@ -207,15 +233,25 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         return (
           <div className="text-center py-8">
             {showAnswer ? (
-              <input
-                type="text"
-                placeholder="Введите последовательность"
-                className="border-2 border-gray-300 p-2 rounded-md w-full max-w-xs"
-                value={selectedOption}
-                onChange={(e) => setSelectedOption(e.target.value)}
-              />
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Введите последовательность"
+                  className="border-2 border-gray-300 p-2 rounded-md w-full max-w-xs"
+                  value={selectedOption}
+                  onChange={(e) => setSelectedOption(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Введите последовательность, которую вы запомнили (цифры, буквы или слова через запятую)
+                </p>
+              </div>
             ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
+              <div className="space-y-4">
+                <p className="text-2xl font-bold">Запоминайте...</p>
+                {question.stimulus && (
+                  <p className="text-xl">{question.stimulus}</p>
+                )}
+              </div>
             )}
           </div>
         );
@@ -237,7 +273,18 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 ))}
               </div>
             ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
+              <div className="space-y-4">
+                <p className="text-2xl font-bold">Запоминайте слова:</p>
+                {question.stimulus && Array.isArray(question.stimulus) ? (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {question.stimulus.map((word, i) => (
+                      <span key={i} className="text-xl font-medium px-2">{word}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xl">{question.stimulus}</p>
+                )}
+              </div>
             )}
           </div>
         );
@@ -263,7 +310,23 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 ))}
               </div>
             ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
+              <div className="space-y-4">
+                <p className="text-2xl font-bold">Запоминайте изображения:</p>
+                {question.images && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {question.images.map((img, index) => (
+                      <div key={index} className="border-2 p-1">
+                        <img 
+                          src={getImageSource(img)} 
+                          alt={`Изображение ${index + 1}`} 
+                          className="w-full h-auto"
+                          onError={() => handleImageError(img)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         );

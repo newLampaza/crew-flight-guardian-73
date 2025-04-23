@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TestResults } from "./TestResults";
@@ -30,6 +31,7 @@ export const ResultsDialog: React.FC<ResultsDialogProps> = ({
           <TestResults
             result={testResults}
             onClose={onClose}
+            onRetry={onRetry}
           />
         )}
       </DialogContent>

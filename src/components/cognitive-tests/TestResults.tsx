@@ -11,11 +11,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 interface TestResultsProps {
   result: TestResult;
   onClose?: () => void;
+  onRetry?: () => void;
 }
 
 export const TestResults: React.FC<TestResultsProps> = ({
   result,
-  onClose
+  onClose,
+  onRetry
 }) => {
   const formatDate = (dateString: string) => {
     try {
@@ -98,16 +100,18 @@ export const TestResults: React.FC<TestResultsProps> = ({
   };
   
   const getQuestionTypeFromText = (questionText: string) => {
+    // Улучшенное определение типов вопросов
     if (questionText.includes('последовательность')) return 'Последовательности';
     if (questionText.includes('слова')) return 'Запоминание слов';
-    if (questionText.includes('изображения')) return 'Запоминание изображений';
-    if (questionText.includes('отличия')) return 'Поиск отличий';
-    if (questionText.includes('треугольников')) return 'Подсчет фигур';
-    if (questionText.includes('красные объекты')) return 'Выбор объектов';
-    if (questionText.includes('цифра')) return 'Числовые последовательности';
+    if (questionText.includes('изображения') || questionText.includes('картинки')) return 'Запоминание изображений';
+    if (questionText.includes('отличия') || questionText.includes('отличающ')) return 'Поиск отличий';
+    if (questionText.includes('треугольник') || questionText.includes('квадрат') || 
+        questionText.includes('круг') || questionText.includes('фигур')) return 'Подсчет фигур';
+    if (questionText.includes('красн') || questionText.includes('объект')) return 'Выбор объектов';
+    if (questionText.includes('цифр')) return 'Числовые последовательности';
     if (questionText.includes('лишнее')) return 'Вербальная логика';
-    if (questionText.includes('решите пример')) return 'Математическая логика';
-    if (questionText.includes('поворота')) return 'Пространственное мышление';
+    if (questionText.includes('пример') || questionText.includes('вычисл')) return 'Математическая логика';
+    if (questionText.includes('поворот') || questionText.includes('пространств')) return 'Пространственное мышление';
     
     return 'Другие вопросы';
   };
@@ -244,7 +248,12 @@ export const TestResults: React.FC<TestResultsProps> = ({
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-end gap-2">
+          {onRetry && !inCooldown && (
+            <Button variant="outline" onClick={onRetry}>
+              Пройти снова
+            </Button>
+          )}
           {onClose && (
             <Button onClick={onClose}>
               Закрыть
