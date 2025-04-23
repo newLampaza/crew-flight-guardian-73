@@ -1,27 +1,29 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Brain } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { Clock, CheckCircle, XCircle, Calendar, BarChart, Timer } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface TestCardProps {
   id: string;
   name: string;
   description: string;
   duration: string;
-  icon?: React.ReactNode;
   lastResult?: {
     status: string;
     score: number;
     date: string;
+    errors: string[];
     inCooldown?: boolean;
     cooldownEnd?: string;
-  } | null;
-  mode?: 'default' | 'compact';
-  onStartTest: (id: string) => void;
-  onViewResults?: (id: string) => void;
+  };
+  icon: React.ReactNode;
+  onStartTest: (testId: string) => void;
+  onViewResults: (testId: string) => void;
+  mode?: 'compact' | 'full';
   showResultsButton?: boolean;
 }
 
@@ -30,86 +32,204 @@ export const TestCard: React.FC<TestCardProps> = ({
   name,
   description,
   duration,
-  icon = <Brain className="h-5 w-5" />,
   lastResult,
-  mode = 'default',
+  icon,
   onStartTest,
   onViewResults,
-  showResultsButton = true,
+  mode = 'full',
+  showResultsButton = true
 }) => {
-  const isInCooldown = lastResult?.inCooldown ?? false;
-
-  const getStatusColor = (status?: string) => {
+  // Получить цвет статуса
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'passed':
-        return 'bg-green-100 text-green-800 hover:bg-green-200';
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
-      case 'failed':
-        return 'bg-red-100 text-red-800 hover:bg-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+      case "passed": return "text-status-good";
+      case "warning": return "text-status-warning";
+      case "failed": return "text-status-danger";
+      default: return "text-gray-500";
+    }
+  };
+  
+  // Получить текст статуса
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "passed": return "Пройден";
+      case "warning": return "Требуется повторный тест";
+      case "failed": return "Не пройден";
+      default: return "Нет данных";
+    }
+  };
+  
+  // Получить иконку статуса
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "passed": return <CheckCircle className="h-5 w-5 text-status-good" />;
+      case "warning": return <Clock className="h-5 w-5 text-status-warning" />;
+      case "failed": return <XCircle className="h-5 w-5 text-status-danger" />;
+      default: return null;
     }
   };
 
-  return (
-    <Card className={cn(
-      "relative overflow-hidden",
-      mode === 'compact' ? 'border-l-4' : '',
-      lastResult && `border-l-4 ${
-        lastResult.status === 'passed' ? 'border-l-green-500' :
-        lastResult.status === 'warning' ? 'border-l-yellow-500' :
-        'border-l-red-500'
-      }`
-    )}>
-      <CardHeader className={mode === 'compact' ? 'p-4' : undefined}>
-        <CardTitle className="flex items-center gap-2">
-          {icon}
-          <span>{name}</span>
-          {lastResult && (
-            <Badge className={cn("ml-auto", getStatusColor(lastResult.status))}>
-              {lastResult.score}%
-            </Badge>
-          )}
-        </CardTitle>
-        {mode !== 'compact' && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      
-      <CardContent className={mode === 'compact' ? 'p-4 pt-0' : undefined}>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Timer className="h-4 w-4" />
-          <span>{duration}</span>
-        </div>
-        
-        {isInCooldown && lastResult?.cooldownEnd && (
-          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-sm text-amber-700">
-              Перерыв между попытками: 1 минута
-            </p>
-          </div>
-        )}
-      </CardContent>
+  // Форматирование времени перезарядки
+  const formatCooldownTime = (cooldownEnd?: string) => {
+    if (!cooldownEnd) return null;
+    
+    const cooldownDate = new Date(cooldownEnd);
+    const now = new Date();
+    
+    if (cooldownDate <= now) return null;
+    
+    const diffMs = cooldownDate.getTime() - now.getTime();
+    const diffMinutes = Math.ceil(diffMs / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} мин.`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
+    }
+  };
 
-      <CardFooter className={cn(
-        "flex gap-2 flex-wrap",
-        mode === 'compact' ? 'p-4 pt-0' : undefined
-      )}>
-        <Button
-          variant="outline"
-          onClick={() => onStartTest(id)}
-          disabled={isInCooldown}
-        >
-          Начать тест
-        </Button>
-        
-        {showResultsButton && onViewResults && lastResult && (
-          <Button
-            variant="ghost"
+  const cooldownTime = lastResult?.cooldownEnd ? formatCooldownTime(lastResult.cooldownEnd) : null;
+
+  if (mode === 'compact') {
+    return (
+      <Card className="hover-card transition-all duration-300 animate-fade-in">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              {icon}
+              {name}
+            </CardTitle>
+            {lastResult && (
+              <Badge 
+                variant={
+                  lastResult.status === "passed" ? "outline" : 
+                  lastResult.status === "warning" ? "secondary" : 
+                  "destructive"
+                }
+              >
+                {getStatusText(lastResult.status)}
+              </Badge>
+            )}
+          </div>
+          <CardDescription className="flex items-center mt-1">
+            <Calendar className="h-3 w-3 mr-1" />
+            Последнее прохождение: {lastResult?.date || 'Нет данных'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pb-2">
+          {lastResult && (
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium">Результат:</span>
+                <span className="font-bold">{lastResult.score}%</span>
+              </div>
+              <Progress value={lastResult.score} className="h-2" />
+            </div>
+          )}
+          
+          {lastResult?.inCooldown && cooldownTime && (
+            <div className="flex items-center justify-between text-amber-500">
+              <span className="flex items-center text-sm">
+                <Timer className="h-4 w-4 mr-1" /> 
+                Перезарядка:
+              </span>
+              <span className="text-sm font-medium">{cooldownTime}</span>
+            </div>
+          )}
+          
+          {lastResult?.errors && lastResult.errors.length > 0 && (
+            <Alert variant={lastResult.status === "warning" ? "warning" : "destructive"}>
+              <AlertTitle>Обнаружены ошибки</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside text-sm mt-2">
+                  {lastResult.errors.map((error: string, index: number) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between gap-2">
+          <Button 
             onClick={() => onViewResults(id)}
+            variant="outline"
+            className="flex-1"
           >
             Подробнее
           </Button>
+          <Button 
+            onClick={() => onStartTest(id)}
+            className="flex-1 transition-all duration-300 hover:scale-[1.02]"
+            disabled={lastResult?.inCooldown}
+          >
+            {lastResult?.inCooldown ? "Недоступен" : "Пройти тест"}
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="hover-card transition-all duration-300 animate-fade-in">
+      <CardHeader>
+        <div className="flex items-start gap-2">
+          <div className="mt-1 p-2 rounded-full bg-primary/10">
+            {icon}
+          </div>
+          <div>
+            <CardTitle className="text-lg">{name}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Длительность:</span>
+          <Badge variant="outline" className="font-medium">
+            <Clock className="h-3 w-3 mr-1" /> {duration}
+          </Badge>
+        </div>
+        {lastResult && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Последний результат:</span>
+            <div className="flex items-center">
+              {getStatusIcon(lastResult.status)}
+              <span className={`ml-1 text-sm ${getStatusColor(lastResult.status)}`}>
+                {getStatusText(lastResult.status)}
+              </span>
+            </div>
+          </div>
         )}
+        {lastResult?.inCooldown && cooldownTime && (
+          <div className="flex items-center justify-between mt-2 text-amber-500">
+            <span className="flex items-center text-sm">
+              <Timer className="h-4 w-4 mr-1" />
+              Перезарядка:
+            </span>
+            <span className="text-sm font-medium">{cooldownTime}</span>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between gap-2 flex-wrap">
+        {showResultsButton && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => onViewResults(id)}
+          >
+            Результаты
+          </Button>
+        )}
+        <Button 
+          onClick={() => onStartTest(id)}
+          size="sm"
+          disabled={lastResult?.inCooldown}
+        >
+          {lastResult?.inCooldown ? "Недоступен" : "Начать тест"}
+        </Button>
       </CardFooter>
     </Card>
   );

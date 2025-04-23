@@ -1,12 +1,12 @@
 
-import React from "react";
-import { TestResult } from "@/types/cognitivetests";
+import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, AlertCircle, Clock, Brain, Calendar, Timer } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { TestResult } from "@/types/cognitivetests";
 
 interface TestResultsProps {
   result: TestResult;
@@ -19,6 +19,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
   onClose,
   onRetry
 }) => {
+  // Форматируем дату
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -34,12 +35,14 @@ export const TestResults: React.FC<TestResultsProps> = ({
     }
   };
 
+  // Форматируем время
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
   
+  // Форматируем время перезарядки
   const formatCooldownTime = (cooldownEndString?: string) => {
     if (!cooldownEndString) return null;
     
@@ -60,12 +63,14 @@ export const TestResults: React.FC<TestResultsProps> = ({
     }
   };
 
+  // Получаем цвет прогресса в зависимости от результата
   const getProgressColor = (score: number) => {
     if (score >= 80) return 'bg-green-500';
     if (score >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
+  // Получаем текстовый статус результата
   const getScoreStatus = (score: number) => {
     if (score >= 80) return 'Отлично';
     if (score >= 60) return 'Хорошо';
@@ -73,6 +78,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
     return 'Требуется улучшение';
   };
 
+  // Получаем локализованное название типа теста
   const getTestTypeName = (type: string) => {
     const types: Record<string, string> = {
       'attention': 'Тест внимания',
@@ -83,6 +89,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
     return types[type] || type;
   };
 
+  // Категоризация ошибок по типам вопросов
   const categorizeErrors = () => {
     if (!result.mistakes || result.mistakes.length === 0) return {};
     
@@ -100,57 +107,26 @@ export const TestResults: React.FC<TestResultsProps> = ({
   };
   
   const getQuestionTypeFromText = (questionText: string) => {
-    // Улучшенное определение типов вопросов
     if (questionText.includes('последовательность')) return 'Последовательности';
     if (questionText.includes('слова')) return 'Запоминание слов';
-    if (questionText.includes('изображения') || questionText.includes('картинки')) return 'Запоминание изображений';
-    if (questionText.includes('отличия') || questionText.includes('отличающ')) return 'Поиск отличий';
-    if (questionText.includes('треугольник') || questionText.includes('квадрат') || 
-        questionText.includes('круг') || questionText.includes('фигур')) return 'Подсчет фигур';
-    if (questionText.includes('красн') || questionText.includes('объект')) return 'Выбор объектов';
-    if (questionText.includes('цифр')) return 'Числовые последовательности';
+    if (questionText.includes('изображения')) return 'Запоминание изображений';
+    if (questionText.includes('отличия')) return 'Поиск отличий';
+    if (questionText.includes('треугольников')) return 'Подсчет фигур';
+    if (questionText.includes('красные объекты')) return 'Выбор объектов';
+    if (questionText.includes('цифра')) return 'Числовые последовательности';
     if (questionText.includes('лишнее')) return 'Вербальная логика';
-    if (questionText.includes('пример') || questionText.includes('вычисл')) return 'Математическая логика';
-    if (questionText.includes('поворот') || questionText.includes('пространств')) return 'Пространственное мышление';
+    if (questionText.includes('решите пример')) return 'Математическая логика';
+    if (questionText.includes('поворота')) return 'Пространственное мышление';
     
     return 'Другие вопросы';
   };
 
+  // Категории ошибок
   const errorCategories = categorizeErrors();
   
+  // Проверяем наличие перезарядки
   const cooldownTime = result.cooldown_end ? formatCooldownTime(result.cooldown_end) : null;
   const inCooldown = cooldownTime !== null;
-
-  // Расширенный перевод категорий на русский язык
-  const categoryTypeRu: Record<string, string> = {
-    "count": "Подсчет объектов/фигур",
-    "pattern": "Поиск закономерности/паттерна",
-    "logic": "Логика",
-    "math": "Математика",
-    "difference": "Поиск отличий",
-    "select": "Выбор объектов",
-    "sequence": "Последовательности",
-    "words": "Запоминание слов",
-    "images": "Запоминание изображений",
-    "pairs": "Соотнесение пар",
-    "matrix": "Матрицы/таблицы"
-  };
-
-  // Преобразование отчета об ошибках с переводом типов
-  const getTranslatedErrorAnalysis = () => {
-    if (!result.details.error_analysis) return {};
-    
-    const translatedErrorAnalysis: Record<string, number> = {};
-    
-    Object.entries(result.details.error_analysis).forEach(([type, count]) => {
-      const translatedType = categoryTypeRu[type] || type;
-      translatedErrorAnalysis[translatedType] = count;
-    });
-    
-    return translatedErrorAnalysis;
-  };
-
-  const translatedErrorAnalysis = getTranslatedErrorAnalysis();
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -233,11 +209,11 @@ export const TestResults: React.FC<TestResultsProps> = ({
               </div>
             )}
             
-            {Object.keys(translatedErrorAnalysis).length > 0 && (
+            {result.details.error_analysis && (
               <div className="mt-4">
                 <h4 className="text-sm font-medium mb-2">Анализ по категориям вопросов:</h4>
                 <div className="space-y-1">
-                  {Object.entries(translatedErrorAnalysis).map(([type, count], i) => (
+                  {Object.entries(result.details.error_analysis).map(([type, count], i) => (
                     <div key={i} className="flex justify-between text-sm">
                       <span>{type}</span>
                       <span>{count} ошибок</span>
@@ -248,10 +224,10 @@ export const TestResults: React.FC<TestResultsProps> = ({
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          {onRetry && !inCooldown && (
-            <Button variant="outline" onClick={onRetry}>
-              Пройти снова
+        <CardFooter className="flex justify-between">
+          {onRetry && (
+            <Button variant="outline" onClick={onRetry} disabled={inCooldown}>
+              {inCooldown ? `Недоступен (${cooldownTime})` : "Повторить тест"}
             </Button>
           )}
           {onClose && (
@@ -264,5 +240,3 @@ export const TestResults: React.FC<TestResultsProps> = ({
     </div>
   );
 };
-
-export default TestResults;

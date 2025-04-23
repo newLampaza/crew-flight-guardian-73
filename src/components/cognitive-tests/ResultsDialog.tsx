@@ -38,5 +38,3 @@ export const ResultsDialog: React.FC<ResultsDialogProps> = ({
     </Dialog>
   );
 };
-
-export default ResultsDialog;

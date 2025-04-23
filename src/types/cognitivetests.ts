@@ -13,12 +13,17 @@ export interface TestQuestion {
   type: string;
   question: string;
   options?: string[];
-  category?: string;
+  image?: string;
+  images?: string[];
+  grid?: any[][];
+  matrix?: number[][];
+  stimulus?: string | string[];
   delay?: number;
   correct_answer?: string;
   answer_options?: string[];
-  multiple_select?: boolean;
-  pairs?: [string, string][];
+  question_text?: string;
+  animation?: string;
+  multiple_select?: boolean; // Флаг для вопросов с множественным выбором
 }
 
 export interface TestSession {
