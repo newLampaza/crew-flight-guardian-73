@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TestQuestion } from '@/types/cognitivetests';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface TestQuestionProps {
   question: TestQuestion;
@@ -35,16 +36,54 @@ const getSafeImageUrl = (imgUrl: string) => {
   return imgUrl;
 };
 
+// Эмодзи для элементов
+const EMOJIS: Record<string, string> = {
+  "яблоко": "🍎",
+  "банан": "🍌",
+  "груша": "🍐",
+  "апельсин": "🍊",
+  "лимон": "🍋",
+  "виноград": "🍇",
+  "клубника": "🍓",
+  "арбуз": "🍉",
+  "персик": "🍑",
+  "ананас": "🍍",
+  "красный": "🟥",
+  "синий": "🟦",
+  "зеленый": "🟩",
+  "желтый": "🟨",
+  "фиолетовый": "🟪",
+  "оранжевый": "🟧",
+  "черный": "⬛",
+  "белый": "⬜",
+};
+
 const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [imageFallbacks, setImageFallbacks] = useState<Record<string, boolean>>({});
+  const [sequenceItems, setSequenceItems] = useState<string[]>([]);
+  const [pairsSelection, setPairsSelection] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // Сбрасываем состояние при изменении вопроса
+    setSelectedOption('');
+    setSelectedOptions([]);
+    setShowAnswer(question.delay ? false : true);
+    setImageFallbacks({});
+    
+    if (question.type === 'sequence' && question.options) {
+      // Перемешиваем варианты для последовательности
+      setSequenceItems([...question.options].sort(() => Math.random() - 0.5));
+    }
+    
+    if (question.type === 'pairs') {
+      setPairsSelection({});
+    }
+    
     if (question.delay) {
-      setShowAnswer(false);
       setTimeLeft(question.delay);
 
       const timer = setInterval(() => {
@@ -72,9 +111,33 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     });
   };
 
+  // Обработчик для перетаскивания элементов последовательности
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(sequenceItems);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSequenceItems(items);
+  };
+
+  // Обработчик для соотнесения пар
+  const handlePairSelection = (option: string, answer: string) => {
+    setPairsSelection((prev) => ({
+      ...prev,
+      [option]: answer
+    }));
+  };
+
   const handleSubmit = () => {
     if (question.multiple_select) {
       onAnswer(question.id, selectedOptions.join(','));
+    } else if (question.type === 'sequence') {
+      onAnswer(question.id, sequenceItems.join(','));
+    } else if (question.type === 'pairs') {
+      const pairs = Object.entries(pairsSelection).map(([option, answer]) => `${option}:${answer}`);
+      onAnswer(question.id, pairs.join(','));
     } else {
       onAnswer(question.id, selectedOption);
     }
@@ -96,25 +159,43 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     return getSafeImageUrl(img);
   };
 
+  // Получение эмодзи для текста, если таковой есть
+  const getTextWithEmoji = (text: string) => {
+    const emoji = EMOJIS[text.toLowerCase()];
+    return emoji ? `${text} ${emoji}` : text;
+  };
+
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
+        // Первый вопрос теста внимания (полностью изменен)
         return (
-          <div className="grid grid-cols-2 gap-4">
-            {question.options?.map((img, index) => (
-              <div 
-                key={index} 
-                className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
-                onClick={() => setSelectedOption(img)}
-              >
+          <div className="space-y-4">
+            {question.image && (
+              <div className="mb-4">
                 <img 
-                  src={getImageSource(img)} 
-                  alt={`Изображение ${index + 1}`} 
-                  className="w-full h-auto"
-                  onError={() => handleImageError(img)}
+                  src={getImageSource(question.image)} 
+                  alt="Основное изображение" 
+                  className="max-w-full h-auto mx-auto"
+                  onError={() => handleImageError(question.image || '')}
                 />
               </div>
-            ))}
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              {question.options?.map((option, index) => (
+                <Button
+                  key={index}
+                  variant={selectedOption === option ? "default" : "outline"}
+                  className="h-auto py-3 px-4 flex justify-center items-center"
+                  onClick={() => setSelectedOption(option)}
+                >
+                  <div className="text-center">
+                    {getTextWithEmoji(option)}
+                  </div>
+                </Button>
+              ))}
+            </div>
           </div>
         );
 
@@ -140,7 +221,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 <Button
                   key={index}
                   variant={selectedOption === option ? "default" : "outline"}
-                  className="justify-start h-auto py-2"
+                  className="justify-start h-auto py-2 text-wrap whitespace-normal"
                   onClick={() => setSelectedOption(option)}
                 >
                   {option}
@@ -153,6 +234,17 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'select':
         return (
           <div className="space-y-4">
+            {question.image && (
+              <div className="mb-4">
+                <img 
+                  src={getImageSource(question.image)} 
+                  alt="Вопрос" 
+                  className="max-w-full h-auto mx-auto"
+                  onError={() => handleImageError(question.image || '')}
+                />
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 gap-2">
               {question.options?.map((option, index) => (
                 <div className="flex items-center space-x-2" key={index}>
@@ -161,7 +253,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                     checked={selectedOptions.includes(option)}
                     onCheckedChange={() => handleMultipleSelect(option)}
                   />
-                  <Label htmlFor={`option-${index}`}>{option}</Label>
+                  <Label htmlFor={`option-${index}`}>{getTextWithEmoji(option)}</Label>
                 </div>
               ))}
             </div>
@@ -169,18 +261,53 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         );
 
       case 'sequence':
+        // Должен показывать последовательность во время паузы и затем позволять её собирать
         return (
-          <div className="text-center py-8">
-            {showAnswer ? (
-              <input
-                type="text"
-                placeholder="Введите последовательность"
-                className="border-2 border-gray-300 p-2 rounded-md w-full max-w-xs"
-                value={selectedOption}
-                onChange={(e) => setSelectedOption(e.target.value)}
-              />
+          <div className="text-center py-4">
+            {!showAnswer ? (
+              <div className="flex flex-col items-center justify-center">
+                <p className="text-xl font-bold mb-4">Запомните последовательность:</p>
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  {question.options?.map((item, index) => (
+                    <div key={index} className="p-3 border-2 border-primary rounded-md">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-lg">Осталось {timeLeft} секунд</p>
+              </div>
             ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
+              <div className="flex flex-col items-center">
+                <p className="text-lg mb-4">Восстановите правильную последовательность:</p>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="sequence" direction="horizontal">
+                    {(provided) => (
+                      <div 
+                        className="flex flex-wrap justify-center gap-2 mb-4 min-h-20"
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      >
+                        {sequenceItems.map((item, index) => (
+                          <Draggable key={item} draggableId={item} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="p-3 border-2 border-gray-300 rounded-md bg-background cursor-move"
+                              >
+                                {item}
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+                <p className="text-sm text-muted-foreground">Перетаскивайте элементы, чтобы расположить их в правильном порядке</p>
+              </div>
             )}
           </div>
         );
@@ -188,21 +315,31 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'words':
         return (
           <div className="space-y-4">
-            {showAnswer ? (
+            {!showAnswer ? (
+              <div className="text-center py-8">
+                <p className="text-xl font-bold mb-4">Запомните слова:</p>
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  {question.options?.map((word, index) => (
+                    <div key={index} className="p-2 border border-gray-300 rounded">
+                      {word}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-lg">Осталось {timeLeft} секунд</p>
+              </div>
+            ) : (
               <div className="grid grid-cols-2 gap-2">
                 {question.options?.map((option, index) => (
                   <Button
                     key={index}
-                    variant={selectedOption === option ? "default" : "outline"}
+                    variant={selectedOptions.includes(option) ? "default" : "outline"}
                     className="justify-start h-auto py-2"
-                    onClick={() => setSelectedOption(option)}
+                    onClick={() => handleMultipleSelect(option)}
                   >
                     {option}
                   </Button>
                 ))}
               </div>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
@@ -210,13 +347,30 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'images':
         return (
           <div className="space-y-4">
-            {showAnswer ? (
+            {!showAnswer ? (
+              <div className="text-center py-4">
+                <p className="text-xl font-bold mb-4">Запомните изображения:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                  {question.options?.map((img, index) => (
+                    <div key={index} className="border p-1">
+                      <img 
+                        src={getImageSource(img)} 
+                        alt={`Изображение ${index + 1}`} 
+                        className="w-full h-auto"
+                        onError={() => handleImageError(img)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-lg">Осталось {timeLeft} секунд</p>
+              </div>
+            ) : (
               <div className="grid grid-cols-2 gap-4">
                 {question.options?.map((img, index) => (
                   <div 
                     key={index} 
-                    className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
-                    onClick={() => setSelectedOption(img)}
+                    className={`border-2 p-1 cursor-pointer ${selectedOptions.includes(img) ? 'border-primary' : 'border-gray-200'}`}
+                    onClick={() => handleMultipleSelect(img)}
                   >
                     <img 
                       src={getImageSource(img)} 
@@ -227,8 +381,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
@@ -236,16 +388,32 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'pairs':
         return (
           <div className="space-y-4">
-            {showAnswer ? (
-              <div className="grid grid-cols-2 gap-2">
+            {!showAnswer ? (
+              <div className="text-center py-4">
+                <p className="text-xl font-bold mb-4">Запомните соответствия:</p>
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                  {question.options?.map((option, index) => {
+                    const answer = question.answer_options?.[index];
+                    return (
+                      <div key={index} className="flex items-center justify-between border p-2 rounded">
+                        <span className="font-medium">{option}</span>
+                        <span className="text-primary">→</span>
+                        <span className="font-medium">{answer}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-lg mt-4">Осталось {timeLeft} секунд</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
                 {question.options?.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <Label htmlFor={`option-${index}`}>{option}</Label>
+                  <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 border p-3 rounded">
+                    <Label className="min-w-32 font-medium">{option}</Label>
                     <select
-                      id={`option-${index}`}
-                      className="border-2 border-gray-300 p-2 rounded-md"
-                      value={selectedOption}
-                      onChange={(e) => setSelectedOption(e.target.value)}
+                      className="flex-1 border-2 border-gray-300 p-2 rounded-md"
+                      value={pairsSelection[option] || ""}
+                      onChange={(e) => handlePairSelection(option, e.target.value)}
                     >
                       <option value="">Выберите...</option>
                       {question.answer_options?.map((answer, i) => (
@@ -255,8 +423,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
@@ -264,29 +430,36 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'matrix':
         return (
           <div className="space-y-4">
-            {showAnswer ? (
+            {!showAnswer ? (
+              <div className="text-center py-4">
+                <p className="text-xl font-bold mb-4">Запомните матрицу:</p>
+                <div className="inline-block border-2 border-gray-300 rounded overflow-hidden">
+                  {question.matrix?.map((row, rowIndex) => (
+                    <div key={rowIndex} className="flex">
+                      {row.map((cell, cellIndex) => (
+                        <div
+                          key={`${rowIndex}-${cellIndex}`}
+                          className="border border-gray-300 p-3 text-center min-w-10"
+                        >
+                          {cell}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-lg mt-4">Осталось {timeLeft} секунд</p>
+              </div>
+            ) : (
               <>
                 {question.question_text && (
                   <p className="text-lg">{question.question_text}</p>
                 )}
-                <div className="grid grid-cols-3 gap-2">
-                  {question.matrix?.map((row, rowIndex) => (
-                    row.map((cell, cellIndex) => (
-                      <div
-                        key={`${rowIndex}-${cellIndex}`}
-                        className="border-2 border-gray-300 p-2 text-center"
-                      >
-                        {cell}
-                      </div>
-                    ))
-                  ))}
-                </div>
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   {question.options?.map((option, index) => (
                     <Button
                       key={index}
                       variant={selectedOption === option ? "default" : "outline"}
-                      className="justify-start h-auto py-2"
+                      className="justify-start h-auto py-2 text-wrap whitespace-normal"
                       onClick={() => setSelectedOption(option)}
                     >
                       {option}
@@ -294,14 +467,30 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                   ))}
                 </div>
               </>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
             )}
           </div>
         );
       
       default:
-        return <div>Неизвестный тип вопроса</div>;
+        return <div className="p-4 text-center">Вопрос этого типа в разработке</div>;
+    }
+  };
+
+  const getSubmitDisabled = () => {
+    if (disabled) return true;
+    if (timeLeft !== null) return true;
+    
+    switch (question.type) {
+      case 'select':
+      case 'words':
+      case 'images':
+        return selectedOptions.length === 0;
+      case 'pairs':
+        return question.options?.some(option => !pairsSelection[option]) || false;
+      case 'sequence':
+        return false; // Для последовательности всегда можно отправить текущий порядок
+      default:
+        return !selectedOption;
     }
   };
 
@@ -311,10 +500,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         <h2 className="text-xl font-semibold mb-4">{question.question}</h2>
         
         {timeLeft !== null ? (
-          <div className="text-center py-8">
-            <p className="text-2xl font-bold mb-2">Запоминайте...</p>
-            <p className="text-lg">Осталось {timeLeft} секунд</p>
-          </div>
+          renderQuestionContent()
         ) : (
           <>
             {renderQuestionContent()}
@@ -322,11 +508,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             <div className="mt-6 flex justify-end">
               <Button 
                 onClick={handleSubmit} 
-                disabled={
-                  disabled ||
-                  (question.multiple_select && selectedOptions.length === 0) || 
-                  (!question.multiple_select && !selectedOption)
-                }
+                disabled={getSubmitDisabled()}
               >
                 Ответить
               </Button>
@@ -339,4 +521,3 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 };
 
 export default TestQuestionComponent;
-
