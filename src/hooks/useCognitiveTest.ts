@@ -62,7 +62,7 @@ export const useCognitiveTest = () => {
         }
       } catch (cooldownError) {
         console.error("Ошибка при проверке перезарядки:", cooldownError);
-        // Продолжаем, так как это не критическая ошибка
+        // Продолжаем, так как это не критическая ошибка для запуска теста
       }
 
       setIsLoading(true);

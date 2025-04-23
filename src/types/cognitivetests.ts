@@ -23,7 +23,8 @@ export interface TestQuestion {
   correct_answer?: string;
   answer_options?: string[];
   question_text?: string;
-  animation?: string; // Добавляем поле для анимации
+  animation?: string;
+  multiple_select?: boolean; // Добавляем возможность множественного выбора
 }
 
 export interface TestSession {

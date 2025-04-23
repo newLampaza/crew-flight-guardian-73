@@ -121,7 +121,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
   const handleSubmitAnswer = () => {
     if (question.type === 'select' || question.type === 'words' || 
         question.type === 'images' || question.type === 'pairs' || 
-        question.type === 'multi_target') {
+        question.type === 'multi_target' || question.multiple_select) {
       onAnswer(question.id, selectedItems.join(','));
     } else {
       onAnswer(question.id, answer);
@@ -131,7 +131,6 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
-      case 'select':
       case 'pattern':
       case 'math':
       case 'verbal':
@@ -144,7 +143,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
             {question.image && (
               <div className="flex justify-center my-4">
                 <motion.img 
-                  src={question.image} 
+                  src={question.image.replace('https://i.imgur.com', 'https://picsum.photos')} 
                   alt="Вопрос" 
                   className="max-w-full max-h-64 rounded-md shadow-md" 
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -167,7 +166,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                     <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
                     <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">
                       {option.startsWith('http') ? 
-                        <img src={option} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
+                        <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
                         option
                       }
                     </Label>
@@ -175,6 +174,79 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                 ))}
               </AnimatePresence>
             </RadioGroup>
+          </div>
+        );
+      
+      case 'select':
+        return (
+          <div className="space-y-4">
+            <CardDescription>{question.question}</CardDescription>
+            
+            {question.image && (
+              <div className="flex justify-center my-4">
+                <motion.img 
+                  src={question.image.replace('https://i.imgur.com', 'https://picsum.photos')} 
+                  alt="Вопрос" 
+                  className="max-w-full max-h-64 rounded-md shadow-md" 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            )}
+            
+            {/* Используем чекбоксы для выбора нескольких вариантов, если multiple_select=true */}
+            {question.multiple_select ? (
+              <div className="space-y-2">
+                <p className="font-medium">Выберите все подходящие варианты:</p>
+                <AnimatePresence>
+                  {question.options?.map((option, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                    >
+                      <Checkbox 
+                        id={`multi-select-${index}`} 
+                        checked={selectedItems.includes(option)}
+                        onCheckedChange={() => handleMultipleOptionSelect(option)}
+                        disabled={disabled}
+                      />
+                      <label htmlFor={`multi-select-${index}`} className="cursor-pointer w-full">
+                        {option.startsWith('http') ? 
+                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
+                          option
+                        }
+                      </label>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <RadioGroup value={answer} onValueChange={handleSingleOptionSelect}>
+                <AnimatePresence>
+                  {question.options?.map((option, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                    >
+                      <RadioGroupItem value={option} id={`option-${index}`} disabled={disabled} />
+                      <Label htmlFor={`option-${index}`} className="cursor-pointer w-full">
+                        {option.startsWith('http') ? 
+                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36 rounded-md" /> : 
+                          option
+                        }
+                      </Label>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </RadioGroup>
+            )}
           </div>
         );
         
@@ -226,7 +298,10 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3, delay: i * 0.1 }}
                       >
-                        {img}
+                        {img.startsWith('http') ? 
+                          <img src={img.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Изображение ${i+1}`} className="max-w-36 max-h-36" /> : 
+                          img
+                        }
                       </motion.div>
                     ))
                   }
@@ -256,7 +331,10 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                         disabled={disabled}
                       />
                       <label htmlFor={`check-${index}`} className="text-sm font-medium cursor-pointer w-full">
-                        {option}
+                        {option.startsWith('http') ? 
+                          <img src={option.replace('https://i.imgur.com', 'https://picsum.photos')} alt={`Вариант ${index+1}`} className="max-w-36 max-h-36" /> : 
+                          option
+                        }
                       </label>
                     </motion.div>
                   ))}
@@ -625,7 +703,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <img src={question.image} alt="Вопрос" className="max-w-full max-h-40 rounded-md shadow-md" />
+              <img src={question.image?.replace('https://i.imgur.com', 'https://picsum.photos')} alt="Вопрос" className="max-w-full max-h-40 rounded-md shadow-md" />
             </motion.div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -639,7 +717,7 @@ export const TestQuestion: React.FC<TestQuestionProps> = ({
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                   >
                     <img 
-                      src={option} 
+                      src={option.replace('https://i.imgur.com', 'https://picsum.photos')} 
                       alt={`Вариант ${index+1}`} 
                       className={`max-w-28 max-h-28 mb-2 rounded-md transition-all ${answer === option ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}`} 
                     />
