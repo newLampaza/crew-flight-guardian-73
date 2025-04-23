@@ -12,25 +12,28 @@ interface TestQuestionProps {
   disabled?: boolean;
 }
 
-// Получить "безопасный" url — используем всегда Yandex!
-const getSafeImageUrl = (imgUrl: string) => {
-  // Если это picsum или нет, либо не задано, всё равно генерим урл yandex с seed по длине строки
-  // Можно также добавить ключевые слова, если нужно разнообразие картинок
-  if (!imgUrl || imgUrl.includes('picsum.photos')) {
-    const query = "тест+картинка"; // универсальный запрос на русском
-    // seed по длине строки для "разных" картинок (но это не обязательно)
-    const rand = Math.abs(imgUrl?.length ?? 0) + Math.floor(Math.random() * 10);
-    // Формируем прямой линк на превью из яндекса (превью открывается по прямой ссылке на поисковой странице)
-    // Можно использовать yandex images ссылки-заглушки:
-    return `https://yandex.ru/images/search?text=${query}&p=${rand}`;
-    // В реальности нужен прямой url на изображение, обычно это mini атрибут у img. 
-    // Но для мокапа достаточно такого.
-  }
-  // если не picsum — используем как есть
-  return imgUrl;
-};
+// Список реальных фотографий с Unsplash (можно дополнить по необходимости)
+const UNSPLASH_IMAGES = [
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&auto=format&fit=crop&q=60",
+  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&auto=format&fit=crop&q=60",
+];
 
 const yandexFallbackUrl = "https://yastatic.net/s3/home/pages-blocks/illustrations/search/ru/search-image-1.png";
+
+// Возвращает настоящую фотографию из Unsplash, если источник picsum или невалидный
+const getSafeImageUrl = (imgUrl: string) => {
+  // Любая ссылка со словом picsum или незаполненная или невалидная
+  if (!imgUrl || imgUrl.includes('picsum.photos')) {
+    // Случайная фотография из массива реальных
+    const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
+    return UNSPLASH_IMAGES[rand];
+  }
+  // если урл выглядит валидным — отдаём его как есть
+  return imgUrl;
+};
 
 const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
@@ -38,12 +41,12 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   const [showAnswer, setShowAnswer] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [imageFallbacks, setImageFallbacks] = useState<Record<string, boolean>>({});
-  
+
   useEffect(() => {
     if (question.delay) {
       setShowAnswer(false);
       setTimeLeft(question.delay);
-      
+
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev === null) return null;
@@ -55,11 +58,11 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
           return prev - 1;
         });
       }, 1000);
-      
+
       return () => clearInterval(timer);
     }
   }, [question]);
-  
+
   const handleMultipleSelect = (option: string) => {
     setSelectedOptions(prev => {
       if (prev.includes(option)) {
@@ -68,7 +71,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       return [...prev, option];
     });
   };
-  
+
   const handleSubmit = () => {
     if (question.multiple_select) {
       onAnswer(question.id, selectedOptions.join(','));
@@ -76,7 +79,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       onAnswer(question.id, selectedOption);
     }
   };
-  
+
   const handleImageError = (img: string) => {
     console.error(`Ошибка загрузки изображения: ${img}`);
     setImageFallbacks(prev => ({
@@ -84,15 +87,15 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       [img]: true
     }));
   };
-  
-  // Теперь источник — либо yandex превью, либо yandex fallback
+
+  // Если была ошибка загрузки — показываем yandexFallbackUrl, иначе реальное фото из getSafeImageUrl
   const getImageSource = (img: string) => {
     if (imageFallbacks[img]) {
       return yandexFallbackUrl;
     }
     return getSafeImageUrl(img);
   };
-  
+
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
@@ -114,7 +117,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             ))}
           </div>
         );
-        
+
       case 'count':
       case 'pattern':
       case 'logic':
@@ -131,7 +134,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 />
               </div>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {question.options?.map((option, index) => (
                 <Button
@@ -146,7 +149,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             </div>
           </div>
         );
-      
+
       case 'select':
         return (
           <div className="space-y-4">
@@ -164,7 +167,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             </div>
           </div>
         );
-      
+
       case 'sequence':
         return (
           <div className="text-center py-8">
@@ -301,7 +304,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         return <div>Неизвестный тип вопроса</div>;
     }
   };
-  
+
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardContent className="pt-6">
@@ -336,3 +339,4 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 };
 
 export default TestQuestionComponent;
+
