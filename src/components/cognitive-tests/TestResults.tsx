@@ -50,7 +50,13 @@ export const TestResults: React.FC<TestResultsProps> = ({
     const diffMs = cooldownEnd.getTime() - now.getTime();
     const diffMinutes = Math.ceil(diffMs / (1000 * 60));
     
-    return `${diffMinutes} мин.`;
+    if (diffMinutes < 60) {
+      return `${diffMinutes} мин.`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
+    }
   };
 
   const getProgressColor = (score: number) => {
@@ -98,7 +104,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
     if (questionText.includes('изображения')) return 'Запоминание изображений';
     if (questionText.includes('отличия')) return 'Поиск отличий';
     if (questionText.includes('треугольников')) return 'Подсчет фигур';
-    if (questionText.includes('к��асные объекты')) return 'Выбор объектов';
+    if (questionText.includes('красные объекты')) return 'Выбор объектов';
     if (questionText.includes('цифра')) return 'Числовые последовательности';
     if (questionText.includes('лишнее')) return 'Вербальная логика';
     if (questionText.includes('решите пример')) return 'Математическая логика';
