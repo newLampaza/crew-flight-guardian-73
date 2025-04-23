@@ -278,7 +278,7 @@ def generate_test_questions(test_type):
                 'question': 'Выберите все красные объекты',
                 'options': ['Яблоко', 'Банан', 'Клубника', 'Лимон', 'Вишня'],
                 'correct_answer': 'Яблоко,Клубника,Вишня',
-                'multiple_select': true
+                'multiple_select': True
             },
             {
                 'id': str(uuid.uuid4()),
@@ -1548,6 +1548,7 @@ def handle_feedback(current_user):
                 conn.close()
 
 @app.route('/api/tests/cooldown/<string:test_type>', methods=['GET'])
+@app.route('/api/cognitive-tests/cooldown/<string:test_type>', methods=['GET'])
 @token_required
 def check_test_cooldown(current_user, test_type):
     """Проверка времени перезарядки теста"""
@@ -1585,11 +1586,25 @@ def check_test_cooldown(current_user, test_type):
     finally:
         conn.close()
 
-@app.route('/api/cognitive-tests/cooldown/<string:test_type>', methods=['GET'])
-@token_required
-def check_cognitive_test_cooldown(current_user, test_type):
-    """Алиас для проверки времени перезарядки теста - для обратной совместимости с клиентом"""
-    return check_test_cooldown(current_user, test_type)
+@app.route('/api/debug/check-db', methods=['GET'])
+def check_database():
+    try:
+        conn = get_db_connection()
+        # Check if we can access the database
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+        table_names = [table['name'] for table in tables]
+        conn.close()
+        return jsonify({
+            'status': 'OK',
+            'database_file': DATABASE,
+            'tables': table_names
+        })
+    except sqlite3.Error as e:
+        return jsonify({
+            'status': 'ERROR',
+            'error': str(e),
+            'database_file': DATABASE
+        }), 500
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
