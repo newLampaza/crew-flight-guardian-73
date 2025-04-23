@@ -1,3 +1,4 @@
+
 import React from "react";
 import { TestResult } from "@/types/cognitivetests";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +117,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
   const cooldownTime = result.cooldown_end ? formatCooldownTime(result.cooldown_end) : null;
   const inCooldown = cooldownTime !== null;
 
+  // Расширенный перевод категорий на русский язык
   const categoryTypeRu: Record<string, string> = {
     "count": "Подсчет объектов/фигур",
     "pattern": "Поиск закономерности/паттерна",
@@ -129,6 +131,22 @@ export const TestResults: React.FC<TestResultsProps> = ({
     "pairs": "Соотнесение пар",
     "matrix": "Матрицы/таблицы"
   };
+
+  // Преобразование отчета об ошибках с переводом типов
+  const getTranslatedErrorAnalysis = () => {
+    if (!result.details.error_analysis) return {};
+    
+    const translatedErrorAnalysis: Record<string, number> = {};
+    
+    Object.entries(result.details.error_analysis).forEach(([type, count]) => {
+      const translatedType = categoryTypeRu[type] || type;
+      translatedErrorAnalysis[translatedType] = count;
+    });
+    
+    return translatedErrorAnalysis;
+  };
+
+  const translatedErrorAnalysis = getTranslatedErrorAnalysis();
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -211,13 +229,13 @@ export const TestResults: React.FC<TestResultsProps> = ({
               </div>
             )}
             
-            {result.details.error_analysis && (
+            {Object.keys(translatedErrorAnalysis).length > 0 && (
               <div className="mt-4">
                 <h4 className="text-sm font-medium mb-2">Анализ по категориям вопросов:</h4>
                 <div className="space-y-1">
-                  {Object.entries(result.details.error_analysis).map(([type, count], i) => (
+                  {Object.entries(translatedErrorAnalysis).map(([type, count], i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span>{categoryTypeRu[type] || type}</span>
+                      <span>{type}</span>
                       <span>{count} ошибок</span>
                     </div>
                   ))}

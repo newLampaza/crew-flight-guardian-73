@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TestQuestion } from '@/types/cognitivetests';
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TestQuestionProps {
   question: TestQuestion;
@@ -21,13 +23,19 @@ const UNSPLASH_IMAGES = [
   "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&auto=format&fit=crop&q=60",
 ];
 
-const yandexFallbackUrl = "https://yastatic.net/s3/home/pages-blocks/illustrations/search/ru/search-image-1.png";
+// Плейсхолдер для изображений если нет доступа к Yandex
+const fallbackImageUrl = "https://placekitten.com/400/300";
 
 // Возвращает настоящую фотографию из Unsplash, если источник picsum или невалидный
 const getSafeImageUrl = (imgUrl: string) => {
-  // Любая ссылка со словом picsum или незаполненная или невалидная
-  if (!imgUrl || imgUrl.includes('picsum.photos')) {
+  // Проверяем, является ли URL эмодзи или строкой без http/https
+  if (!imgUrl || imgUrl.match(/^\p{Emoji}/u) || !imgUrl.match(/^https?:\/\//i)) {
     // Случайная фотография из массива реальных
+    const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
+    return UNSPLASH_IMAGES[rand];
+  }
+  // Проверяем на picsum
+  if (imgUrl.includes('picsum.photos')) {
     const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
     return UNSPLASH_IMAGES[rand];
   }
@@ -63,6 +71,12 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     }
   }, [question]);
 
+  // Очищаем выбранные ответы при смене вопроса
+  useEffect(() => {
+    setSelectedOption('');
+    setSelectedOptions([]);
+  }, [question.id]);
+
   const handleMultipleSelect = (option: string) => {
     setSelectedOptions(prev => {
       if (prev.includes(option)) {
@@ -88,15 +102,36 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     }));
   };
 
-  // Если была ошибка загрузки — показываем yandexFallbackUrl, иначе реальное фото из getSafeImageUrl
+  // Если была ошибка загрузки — показываем fallbackImageUrl, иначе реальное фото из getSafeImageUrl
   const getImageSource = (img: string) => {
     if (imageFallbacks[img]) {
-      return yandexFallbackUrl;
+      return fallbackImageUrl;
     }
     return getSafeImageUrl(img);
   };
 
+  // Проверяем поддерживаемые типы вопросов
+  const isSupportedQuestionType = () => {
+    const supportedTypes = [
+      'difference', 'count', 'pattern', 'logic', 'math',
+      'select', 'sequence', 'words', 'images', 'pairs', 'matrix'
+    ];
+    return supportedTypes.includes(question.type);
+  };
+
   const renderQuestionContent = () => {
+    // Проверка на поддерживаемый тип вопроса
+    if (!isSupportedQuestionType()) {
+      return (
+        <Alert variant="warning" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Неизвестный тип вопроса: {question.type}. Свяжитесь с администратором.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
     switch (question.type) {
       case 'difference':
         return (
@@ -301,7 +336,8 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         );
       
       default:
-        return <div>Неизвестный тип вопроса</div>;
+        // Этот блок не должен выполняться благодаря проверке isSupportedQuestionType выше
+        return <div>Неизвестный тип вопроса: {question.type}</div>;
     }
   };
 
@@ -324,6 +360,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
                 onClick={handleSubmit} 
                 disabled={
                   disabled ||
+                  !isSupportedQuestionType() ||
                   (question.multiple_select && selectedOptions.length === 0) || 
                   (!question.multiple_select && !selectedOption)
                 }
@@ -339,4 +376,3 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 };
 
 export default TestQuestionComponent;
-
