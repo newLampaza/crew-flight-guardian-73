@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, ActivitySquare, MousePointer, Timer, Loader2, BarChart, RefreshCw } from "lucide-react";
 import { TestCard } from "@/components/cognitive-tests/TestCard";
@@ -13,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
-// Конфигурация доступных тестов
 const testConfig = [
   {
     id: "attention",
@@ -51,7 +49,6 @@ const CognitiveTestsPage = () => {
   const [activeTab, setActiveTab] = useState("available");
   
   useEffect(() => {
-    // Обновляем токен при входе на страницу
     if (isAuthenticated) {
       refreshToken().catch(console.error);
     }
@@ -82,7 +79,6 @@ const CognitiveTestsPage = () => {
     checkTestCooldown
   } = useTestHistory();
 
-  // Обновляем историю при завершении теста
   useEffect(() => {
     if (testComplete && !testLoading) {
       refreshHistory();
@@ -93,7 +89,6 @@ const CognitiveTestsPage = () => {
 
   const handleStartTest = async () => {
     if (activeTestId) {
-      // Проверяем, находится ли тест в перезарядке
       const inCooldown = await checkTestCooldown(activeTestId);
       if (!inCooldown) {
         startTest(activeTestId);
@@ -103,7 +98,6 @@ const CognitiveTestsPage = () => {
 
   const handleRetryTest = async (testId: string) => {
     setShowResultDetails(false);
-    // Проверяем, находится ли тест в перезарядке
     const inCooldown = await checkTestCooldown(testId);
     if (!inCooldown) {
       setTimeout(() => startTest(testId), 300);
@@ -112,7 +106,6 @@ const CognitiveTestsPage = () => {
 
   const handleCloseTest = () => {
     closeTest();
-    // Обновляем историю тестов при закрытии теста
     if (testComplete) {
       refreshHistory();
     }
@@ -198,7 +191,6 @@ const CognitiveTestsPage = () => {
       );
     }
 
-    // Фильтруем только те тесты, по которым есть результаты
     const testsWithResults = testConfig.filter(test => getLastResult(test.id) !== null);
 
     if (testsWithResults.length === 0) {
@@ -216,15 +208,6 @@ const CognitiveTestsPage = () => {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">История результатов</h3>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refreshHistory}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Обновить
-          </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {testsWithResults.map((test) => (
@@ -306,7 +289,6 @@ const CognitiveTestsPage = () => {
         isOpen={showResultDetails}
         testResults={selectedTestResults}
         onClose={() => setShowResultDetails(false)}
-        onRetry={() => activeTestId && handleRetryTest(activeTestId)}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,12 @@ import { TestResult } from "@/types/cognitivetests";
 interface TestResultsProps {
   result: TestResult;
   onClose?: () => void;
-  onRetry?: () => void;
 }
 
 export const TestResults: React.FC<TestResultsProps> = ({
   result,
-  onClose,
-  onRetry
+  onClose
 }) => {
-  // Форматируем дату
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -35,14 +31,12 @@ export const TestResults: React.FC<TestResultsProps> = ({
     }
   };
 
-  // Форматируем время
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
   
-  // Форматируем время перезарядки
   const formatCooldownTime = (cooldownEndString?: string) => {
     if (!cooldownEndString) return null;
     
@@ -63,14 +57,12 @@ export const TestResults: React.FC<TestResultsProps> = ({
     }
   };
 
-  // Получаем цвет прогресса в зависимости от результата
   const getProgressColor = (score: number) => {
     if (score >= 80) return 'bg-green-500';
     if (score >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
-  // Получаем текстовый статус результата
   const getScoreStatus = (score: number) => {
     if (score >= 80) return 'Отлично';
     if (score >= 60) return 'Хорошо';
@@ -78,7 +70,6 @@ export const TestResults: React.FC<TestResultsProps> = ({
     return 'Требуется улучшение';
   };
 
-  // Получаем локализованное название типа теста
   const getTestTypeName = (type: string) => {
     const types: Record<string, string> = {
       'attention': 'Тест внимания',
@@ -89,7 +80,6 @@ export const TestResults: React.FC<TestResultsProps> = ({
     return types[type] || type;
   };
 
-  // Категоризация ошибок по типам вопросов
   const categorizeErrors = () => {
     if (!result.mistakes || result.mistakes.length === 0) return {};
     
@@ -121,12 +111,24 @@ export const TestResults: React.FC<TestResultsProps> = ({
     return 'Другие вопросы';
   };
 
-  // Категории ошибок
   const errorCategories = categorizeErrors();
   
-  // Проверяем наличие перезарядки
   const cooldownTime = result.cooldown_end ? formatCooldownTime(result.cooldown_end) : null;
   const inCooldown = cooldownTime !== null;
+
+  const categoryTypeRu: Record<string, string> = {
+    "count": "Подсчет объектов/фигур",
+    "pattern": "Поиск закономерности/паттерна",
+    "logic": "Логика",
+    "math": "Математика",
+    "difference": "Поиск отличий",
+    "select": "Выбор объектов",
+    "sequence": "Последовательности",
+    "words": "Запоминание слов",
+    "images": "Запоминание изображений",
+    "pairs": "Соотнесение пар",
+    "matrix": "Матрицы/таблицы"
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -215,7 +217,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
                 <div className="space-y-1">
                   {Object.entries(result.details.error_analysis).map(([type, count], i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span>{type}</span>
+                      <span>{categoryTypeRu[type] || type}</span>
                       <span>{count} ошибок</span>
                     </div>
                   ))}
@@ -224,12 +226,7 @@ export const TestResults: React.FC<TestResultsProps> = ({
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          {onRetry && (
-            <Button variant="outline" onClick={onRetry} disabled={inCooldown}>
-              {inCooldown ? `Недоступен (${cooldownTime})` : "Повторить тест"}
-            </Button>
-          )}
+        <CardFooter className="flex justify-end">
           {onClose && (
             <Button onClick={onClose}>
               Закрыть
