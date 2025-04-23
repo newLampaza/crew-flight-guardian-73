@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { TestQuestion } from '@/types/cognitivetests';
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 interface TestQuestionProps {
   question: TestQuestion;
@@ -14,56 +15,25 @@ interface TestQuestionProps {
   disabled?: boolean;
 }
 
-// Список реальных фотографий с Unsplash (можно дополнить по необходимости)
-const UNSPLASH_IMAGES = [
-  "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=400&auto=format&fit=crop&q=60",
-];
-
-// Плейсхолдер для изображений если нет доступа к внешним ресурсам
-const fallbackImageUrl = "https://via.placeholder.com/400x300?text=Изображение";
-
-// Проверяем тип строки - является ли она эмодзи
-const isEmoji = (str: string) => {
-  const regex = /\p{Emoji}/u;
-  return regex.test(str);
+// Эмодзи для вопросов с изображениями
+const QUESTION_EMOJIS = {
+  fruits: ['🍎', '🍌', '🍊', '🍇', '🍉', '🍐'],
+  animals: ['🐶', '🐱', '🐭', '🐰', '🦊', '🐻'],
+  vehicles: ['🚗', '🚲', '✈️', '🚂', '🚢', '🚌'],
+  objects: ['📱', '💻', '⌚️', '📷', '🎮', '📺'],
+  buildings: ['🏠', '🏢', '🏫', '🏭', '🏰', '⛪️'],
+  nature: ['🌳', '🌺', '🌙', '⭐️', '☀️', '🌈']
 };
 
-// Возвращает настоящую фотографию из Unsplash если источник невалидный
-const getSafeImageUrl = (imgUrl: string) => {
-  // Проверяем, является ли URL эмодзи
-  if (!imgUrl) {
-    return fallbackImageUrl;
+// Функция для получения случайных эмодзи из категории
+const getRandomEmojis = (category: keyof typeof QUESTION_EMOJIS, count: number) => {
+  const emojis = [...QUESTION_EMOJIS[category]];
+  const result = [];
+  while (result.length < count && emojis.length > 0) {
+    const index = Math.floor(Math.random() * emojis.length);
+    result.push(emojis.splice(index, 1)[0]);
   }
-  
-  if (isEmoji(imgUrl)) {
-    // Для эмодзи используем случайное изображение
-    const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
-    return UNSPLASH_IMAGES[rand];
-  }
-  
-  // Проверяем на валидный URL
-  try {
-    new URL(imgUrl);
-    // Проверяем на picsum или другие ненадежные источники
-    if (imgUrl.includes('picsum.photos') || 
-        imgUrl.includes('yastatic.net') ||
-        !imgUrl.match(/^https?:\/\//i)) {
-      const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
-      return UNSPLASH_IMAGES[rand];
-    }
-    return imgUrl;
-  } catch (e) {
-    // Не валидный URL, возвращаем заглушку
-    const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
-    return UNSPLASH_IMAGES[rand];
-  }
+  return result;
 };
 
 const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer, disabled }) => {
@@ -71,8 +41,27 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [imageFallbacks, setImageFallbacks] = useState<Record<string, boolean>>({});
+  const [reactionStartTime, setReactionStartTime] = useState<number | null>(null);
+  const [showReactionTarget, setShowReactionTarget] = useState(false);
 
+  // Очищаем состояния при смене вопроса
+  useEffect(() => {
+    setSelectedOption('');
+    setSelectedOptions([]);
+    setReactionStartTime(null);
+    setShowReactionTarget(false);
+
+    if (question.type === 'reaction') {
+      // Случайная задержка для теста реакции (1-3 секунды)
+      const delay = Math.random() * 2000 + 1000;
+      setTimeout(() => {
+        setShowReactionTarget(true);
+        setReactionStartTime(Date.now());
+      }, delay);
+    }
+  }, [question.id]);
+
+  // Обработка временного лимита
   useEffect(() => {
     if (question.delay) {
       setShowAnswer(false);
@@ -92,14 +81,15 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 
       return () => clearInterval(timer);
     }
-  }, [question]);
+  }, [question.delay]);
 
-  // Очищаем выбранные ответы при смене вопроса
-  useEffect(() => {
-    setSelectedOption('');
-    setSelectedOptions([]);
-    setImageFallbacks({});
-  }, [question.id]);
+  const handleReactionClick = () => {
+    if (reactionStartTime && showReactionTarget) {
+      const reactionTime = Date.now() - reactionStartTime;
+      onAnswer(question.id, reactionTime.toString());
+      setShowReactionTarget(false);
+    }
+  };
 
   const handleMultipleSelect = (option: string) => {
     setSelectedOptions(prev => {
@@ -112,7 +102,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 
   const handleSubmit = () => {
     if (question.multiple_select) {
-      // Сортируем выбранные опции, чтобы обеспечить стабильность ответа
       const sortedOptions = [...selectedOptions].sort();
       onAnswer(question.id, sortedOptions.join(','));
     } else {
@@ -120,287 +109,127 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     }
   };
 
-  const handleImageError = (img: string) => {
-    console.error(`Ошибка загрузки изображения: ${img}`);
-    setImageFallbacks(prev => ({
-      ...prev,
-      [img]: true
-    }));
-  };
+  const renderReactionTest = () => (
+    <div className="flex justify-center items-center h-64">
+      {showReactionTarget ? (
+        <button
+          onClick={handleReactionClick}
+          className="w-24 h-24 rounded-full bg-green-500 hover:bg-green-600 transition-colors focus:outline-none"
+          aria-label="Нажмите как можно быстрее"
+        />
+      ) : (
+        <p className="text-lg text-center">
+          Приготовьтесь! Когда появится зеленый круг, нажмите на него как можно быстрее
+        </p>
+      )}
+    </div>
+  );
 
-  // Если была ошибка загрузки — показываем fallbackImageUrl, иначе реальное фото из getSafeImageUrl
-  const getImageSource = (img: string) => {
-    if (imageFallbacks[img]) {
-      return fallbackImageUrl;
-    }
-    return getSafeImageUrl(img);
-  };
-
-  // Проверяем поддерживаемые типы вопросов
-  const isSupportedQuestionType = () => {
-    const supportedTypes = [
-      'difference', 'count', 'pattern', 'logic', 'math',
-      'select', 'sequence', 'words', 'images', 'pairs', 'matrix'
-    ];
-    return supportedTypes.includes(question.type);
-  };
-
-  const renderQuestionContent = () => {
-    // Проверка на поддерживаемый тип вопроса
-    if (!isSupportedQuestionType()) {
+  const renderMemoryTest = () => {
+    if (!showAnswer) {
       return (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Неизвестный тип вопроса: {question.type}. Свяжитесь с администратором.
-          </AlertDescription>
-        </Alert>
+        <div className="grid grid-cols-3 gap-4 p-4">
+          {getRandomEmojis(
+            question.category as keyof typeof QUESTION_EMOJIS || 'objects',
+            6
+          ).map((emoji, index) => (
+            <div
+              key={index}
+              className="text-4xl flex justify-center items-center p-4 border rounded"
+            >
+              {emoji}
+            </div>
+          ))}
+        </div>
       );
     }
 
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {question.options?.map((option, index) => (
+          <Button
+            key={index}
+            variant={selectedOption === option ? "default" : "outline"}
+            className="h-16 text-2xl"
+            onClick={() => setSelectedOption(option)}
+          >
+            {option}
+          </Button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPairsMatching = () => (
+    <div className="space-y-4">
+      {question.options?.map((option, index) => (
+        <div key={index} className="flex items-center space-x-4">
+          <span className="text-2xl">{option}</span>
+          <select
+            className="flex-1 p-2 border rounded"
+            value={selectedOption.split(',')[index] || ''}
+            onChange={(e) => {
+              const answers = selectedOption.split(',');
+              answers[index] = e.target.value;
+              setSelectedOption(answers.join(','));
+            }}
+          >
+            <option value="">Выберите соответствие</option>
+            {question.answer_options?.map((answer, i) => (
+              <option key={i} value={answer}>
+                {answer}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderQuestionContent = () => {
     switch (question.type) {
-      case 'difference':
+      case 'reaction':
+        return renderReactionTest();
+      
+      case 'memory':
+        return renderMemoryTest();
+      
+      case 'pairs':
+        return renderPairsMatching();
+      
+      case 'multiple':
         return (
-          <div className="grid grid-cols-2 gap-4">
-            {question.options?.map((img, index) => (
-              <div 
-                key={index} 
-                className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
-                onClick={() => setSelectedOption(img)}
-              >
-                <img 
-                  src={getImageSource(img)} 
-                  alt={`Изображение ${index + 1}`} 
-                  className="w-full h-auto"
-                  onError={() => handleImageError(img)}
+          <div className="space-y-4">
+            {question.options?.map((option, index) => (
+              <div className="flex items-center space-x-2" key={index}>
+                <Checkbox
+                  id={`option-${index}`}
+                  checked={selectedOptions.includes(option)}
+                  onCheckedChange={() => handleMultipleSelect(option)}
                 />
+                <Label htmlFor={`option-${index}`} className="cursor-pointer">
+                  {option}
+                </Label>
               </div>
             ))}
           </div>
         );
-
-      case 'count':
-      case 'pattern':
-      case 'logic':
-      case 'math':
-        return (
-          <div className="space-y-4">
-            {question.image && (
-              <div className="mb-4">
-                <img 
-                  src={getImageSource(question.image)} 
-                  alt="Вопрос" 
-                  className="max-w-full h-auto mx-auto"
-                  onError={() => handleImageError(question.image || '')}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {question.options?.map((option, index) => (
-                <Button
-                  key={index}
-                  variant={selectedOption === option ? "default" : "outline"}
-                  className="justify-start h-auto py-2"
-                  onClick={() => setSelectedOption(option)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'select':
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-2">
-              {question.options?.map((option, index) => (
-                <div className="flex items-center space-x-2" key={index}>
-                  <Checkbox 
-                    id={`option-${index}`}
-                    checked={selectedOptions.includes(option)}
-                    onCheckedChange={() => handleMultipleSelect(option)}
-                  />
-                  <Label htmlFor={`option-${index}`} className="cursor-pointer">{option}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'sequence':
-        return (
-          <div className="text-center py-8">
-            {showAnswer ? (
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Введите последовательность"
-                  className="border-2 border-gray-300 p-2 rounded-md w-full max-w-xs"
-                  value={selectedOption}
-                  onChange={(e) => setSelectedOption(e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Введите последовательность, которую вы запомнили (цифры, буквы или слова через запятую)
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-2xl font-bold">Запоминайте...</p>
-                {question.stimulus && (
-                  <p className="text-xl">{question.stimulus}</p>
-                )}
-              </div>
-            )}
-          </div>
-        );
-        
-      case 'words':
-        return (
-          <div className="space-y-4">
-            {showAnswer ? (
-              <div className="grid grid-cols-2 gap-2">
-                {question.options?.map((option, index) => (
-                  <Button
-                    key={index}
-                    variant={selectedOption === option ? "default" : "outline"}
-                    className="justify-start h-auto py-2"
-                    onClick={() => setSelectedOption(option)}
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-2xl font-bold">Запоминайте слова:</p>
-                {question.stimulus && Array.isArray(question.stimulus) ? (
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {question.stimulus.map((word, i) => (
-                      <span key={i} className="text-xl font-medium px-2">{word}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xl">{question.stimulus}</p>
-                )}
-              </div>
-            )}
-          </div>
-        );
-        
-      case 'images':
-        return (
-          <div className="space-y-4">
-            {showAnswer ? (
-              <div className="grid grid-cols-2 gap-4">
-                {question.options?.map((img, index) => (
-                  <div 
-                    key={index} 
-                    className={`border-2 p-1 cursor-pointer ${selectedOption === img ? 'border-primary' : 'border-gray-200'}`}
-                    onClick={() => setSelectedOption(img)}
-                  >
-                    <img 
-                      src={getImageSource(img)} 
-                      alt={`Изображение ${index + 1}`} 
-                      className="w-full h-auto"
-                      onError={() => handleImageError(img)}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-2xl font-bold">Запоминайте изображения:</p>
-                {question.images && (
-                  <div className="grid grid-cols-2 gap-4">
-                    {question.images.map((img, index) => (
-                      <div key={index} className="border-2 p-1">
-                        <img 
-                          src={getImageSource(img)} 
-                          alt={`Изображение ${index + 1}`} 
-                          className="w-full h-auto"
-                          onError={() => handleImageError(img)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-        
-      case 'pairs':
-        return (
-          <div className="space-y-4">
-            {showAnswer ? (
-              <div className="grid grid-cols-2 gap-2">
-                {question.options?.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <Label htmlFor={`option-${index}`}>{option}</Label>
-                    <select
-                      id={`option-${index}`}
-                      className="border-2 border-gray-300 p-2 rounded-md"
-                      value={selectedOption}
-                      onChange={(e) => setSelectedOption(e.target.value)}
-                    >
-                      <option value="">Выберите...</option>
-                      {question.answer_options?.map((answer, i) => (
-                        <option key={i} value={answer}>{answer}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
-            )}
-          </div>
-        );
-        
-      case 'matrix':
-        return (
-          <div className="space-y-4">
-            {showAnswer ? (
-              <>
-                {question.question_text && (
-                  <p className="text-lg">{question.question_text}</p>
-                )}
-                <div className="grid grid-cols-3 gap-2">
-                  {question.matrix?.map((row, rowIndex) => (
-                    row.map((cell, cellIndex) => (
-                      <div
-                        key={`${rowIndex}-${cellIndex}`}
-                        className="border-2 border-gray-300 p-2 text-center"
-                      >
-                        {cell}
-                      </div>
-                    ))
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  {question.options?.map((option, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedOption === option ? "default" : "outline"}
-                      className="justify-start h-auto py-2"
-                      onClick={() => setSelectedOption(option)}
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="text-2xl font-bold">Запоминайте...</p>
-            )}
-          </div>
-        );
       
       default:
-        // Этот блок не должен выполняться благодаря проверке isSupportedQuestionType выше
-        return <div>Неизвестный тип вопроса: {question.type}</div>;
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            {question.options?.map((option, index) => (
+              <Button
+                key={index}
+                variant={selectedOption === option ? "default" : "outline"}
+                className="justify-start h-auto py-2"
+                onClick={() => setSelectedOption(option)}
+              >
+                {option}
+              </Button>
+            ))}
+          </div>
+        );
     }
   };
 
@@ -418,19 +247,20 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
           <>
             {renderQuestionContent()}
             
-            <div className="mt-6 flex justify-end">
-              <Button 
-                onClick={handleSubmit} 
-                disabled={
-                  disabled ||
-                  !isSupportedQuestionType() ||
-                  (question.multiple_select && selectedOptions.length === 0) || 
-                  (!question.multiple_select && !selectedOption)
-                }
-              >
-                Ответить
-              </Button>
-            </div>
+            {!question.type.includes('reaction') && (
+              <div className="mt-6 flex justify-end">
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={
+                    disabled ||
+                    (question.multiple_select && selectedOptions.length === 0) || 
+                    (!question.multiple_select && !selectedOption)
+                  }
+                >
+                  Ответить
+                </Button>
+              </div>
+            )}
           </>
         )}
       </CardContent>
