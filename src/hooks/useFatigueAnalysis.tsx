@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import axios from 'axios';
 
@@ -31,7 +30,8 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true // Ensure cookies are sent with requests
 });
 
 // Add authentication token to each request
@@ -51,6 +51,25 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Intercept responses for common errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 unauthorized errors
+    if (error.response?.status === 401) {
+      console.error('Authentication error:', error.response?.data || error.message);
+      
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/login')) {
+        console.log('Redirecting to login page due to authentication error');
+        window.location.href = '/login';
+        return Promise.reject(new Error('Authentication required. Please log in.'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void) => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -59,6 +78,14 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
     message: '',
     percent: 0,
   });
+  
+  // Check if we're logged in on mount
+  useEffect(() => {
+    const token = localStorage.getItem('fatigue-guard-token');
+    if (!token && !window.location.pathname.includes('/login')) {
+      console.warn('No authentication token found, user might need to log in');
+    }
+  }, []);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -100,7 +127,22 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
       });
 
       console.log('Submitting video to API:', `${API_BASE_URL}/fatigue/analyze`);
-      console.log('Current auth token:', localStorage.getItem('fatigue-guard-token'));
+      
+      // Проверяем токен перед отправкой запроса
+      const token = localStorage.getItem('fatigue-guard-token');
+      if (!token) {
+        toast({
+          title: "Ошибка авторизации",
+          description: "Необходимо выполнить вход. Перенаправление на страницу входа...",
+          variant: "destructive"
+        });
+        
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+        
+        return;
+      }
       
       // Реальный запрос к API
       try {
@@ -142,7 +184,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           // Если ошибка авторизации, перенаправляем на страницу входа
           setTimeout(() => {
             window.location.href = '/login';
-          }, 2000);
+          }, 1500);
           return;
         }
         
