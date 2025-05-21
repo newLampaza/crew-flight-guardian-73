@@ -49,7 +49,6 @@ export const FlightAnalyzer: React.FC<FlightAnalyzerProps> = ({
         disabled={!lastFlight}
         className="w-full"
         aria-label="Анализировать последний рейс"
-        description="Запуск анализа данных последнего полета"
       >
         {lastFlight?.video_path ? 'Проанализировать запись' : 'Анализировать рейс'}
       </Button>

@@ -8,8 +8,7 @@ const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  },
-  withCredentials: true  // Ensures cookies are sent with requests
+  }
 });
 
 // Add authentication token to each request
@@ -38,11 +37,8 @@ apiClient.interceptors.response.use(
       
       // Only redirect to login if we're not already on the login page
       if (!window.location.pathname.includes('/login')) {
-        console.log('Redirecting to login due to auth error');
         window.location.href = '/login';
       }
-    } else if (error.response?.status === 500) {
-      console.error('Server error:', error.response?.data || error.message);
     }
     return Promise.reject(error);
   }
@@ -50,13 +46,8 @@ apiClient.interceptors.response.use(
 
 export const cognitiveTestsApi = {
   getTestHistory: async (): Promise<TestHistory[]> => {
-    try {
-      const response = await apiClient.get('/cognitive-tests');
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching test history:', error);
-      return [];
-    }
+    const response = await apiClient.get('/cognitive-tests');
+    return response.data || [];
   },
 
   startTest: async (testType: string): Promise<TestSession> => {
