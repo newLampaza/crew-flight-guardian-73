@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { History } from 'lucide-react';
+import { History, Video } from 'lucide-react';
 
 interface Flight {
   flight_id?: number;
@@ -30,19 +30,33 @@ export const FlightAnalyzer: React.FC<FlightAnalyzerProps> = ({
       </div>
       
       {lastFlight && (
-        <div className="mb-4 text-muted-foreground">
-          <p>{lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'}</p>
-          <p className="text-sm">({formatDate(lastFlight.departure_time)})</p>
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{lastFlight.from_code || 'N/A'} → {lastFlight.to_code || 'N/A'}</span>
+            {lastFlight.video_path && (
+              <div className="flex items-center gap-1 text-green-500 text-xs bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                <Video className="h-3 w-3" />
+                <span>Запись</span>
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">({formatDate(lastFlight.departure_time)})</p>
         </div>
       )}
       
       <Button 
         onClick={onAnalyzeFlight}
-        disabled={!lastFlight?.video_path}
+        disabled={!lastFlight}
         className="w-full"
       >
-        Проанализировать
+        {lastFlight?.video_path ? 'Проанализировать запись' : 'Анализировать рейс'}
       </Button>
+      
+      {!lastFlight && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Нет доступных рейсов для анализа
+        </p>
+      )}
     </div>
   );
 };

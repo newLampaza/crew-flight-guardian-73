@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,30 +12,23 @@ interface TestQuestionProps {
   disabled?: boolean;
 }
 
-// Список реальных фотографий с Unsplash (можно дополнить по необходимости)
 const UNSPLASH_IMAGES = [
   "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=60",
   "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&auto=format&fit=crop&q=60",
   "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&auto=format&fit=crop&q=60",
   "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&auto=format&fit=crop&q=60",
 ];
 
 const yandexFallbackUrl = "https://yastatic.net/s3/home/pages-blocks/illustrations/search/ru/search-image-1.png";
 
-// Возвращает настоящую фотографию из Unsplash, если источник picsum или невалидный
 const getSafeImageUrl = (imgUrl: string) => {
-  // Любая ссылка со словом picsum или незаполненная или невалидная
   if (!imgUrl || imgUrl.includes('picsum.photos')) {
-    // Случайная фотография из массива реальных
     const rand = Math.floor(Math.random() * UNSPLASH_IMAGES.length);
     return UNSPLASH_IMAGES[rand];
   }
-  // если урл выглядит валидным — отдаём его как есть
   return imgUrl;
 };
 
-// Эмодзи для элементов
 const EMOJIS: Record<string, string> = {
   "яблоко": "🍎",
   "банан": "🍌",
@@ -66,23 +58,34 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   const [imageFallbacks, setImageFallbacks] = useState<Record<string, boolean>>({});
   const [sequenceItems, setSequenceItems] = useState<string[]>([]);
   const [pairsSelection, setPairsSelection] = useState<Record<string, string>>({});
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [reactionTime, setReactionTime] = useState<number | null>(null);
+  const [showStimulus, setShowStimulus] = useState(false);
+  const [matrixAnswers, setMatrixAnswers] = useState<Record<string, string>>({});
+  const [selectedCells, setSelectedCells] = useState<string[]>([]);
 
   useEffect(() => {
-    // Сбрасываем состояние при изменении вопроса
     setSelectedOption('');
     setSelectedOptions([]);
     setShowAnswer(question.delay ? false : true);
     setImageFallbacks({});
-    
+    setShowStimulus(false);
+    setStartTime(null);
+    setReactionTime(null);
+    setSelectedCells([]);
+
     if (question.type === 'sequence' && question.options) {
-      // Перемешиваем варианты для последовательности
       setSequenceItems([...question.options].sort(() => Math.random() - 0.5));
     }
-    
+
     if (question.type === 'pairs') {
       setPairsSelection({});
     }
-    
+
+    if (question.type === 'matrix_selection') {
+      setMatrixAnswers({});
+    }
+
     if (question.delay) {
       setTimeLeft(question.delay);
 
@@ -100,6 +103,16 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
 
       return () => clearInterval(timer);
     }
+
+    if (question.type === 'reaction') {
+      const delay = Math.random() * 3000 + 1000;
+      const timer = setTimeout(() => {
+        setShowStimulus(true);
+        setStartTime(Date.now());
+      }, delay);
+
+      return () => clearTimeout(timer);
+    }
   }, [question]);
 
   const handleMultipleSelect = (option: string) => {
@@ -111,7 +124,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     });
   };
 
-  // Обработчик для перетаскивания элементов последовательности
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
 
@@ -122,12 +134,35 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     setSequenceItems(items);
   };
 
-  // Обработчик для соотнесения пар
   const handlePairSelection = (option: string, answer: string) => {
     setPairsSelection((prev) => ({
       ...prev,
       [option]: answer
     }));
+  };
+
+  const handleCellClick = (rowIndex: number, colIndex: number) => {
+    const cellId = `${rowIndex}-${colIndex}`;
+    
+    setSelectedCells(prev => {
+      if (prev.includes(cellId)) {
+        return prev.filter(id => id !== cellId);
+      } else {
+        return [...prev, cellId];
+      }
+    });
+  };
+
+  const handleReaction = () => {
+    if (showStimulus && startTime) {
+      const endTime = Date.now();
+      const reactionTimeMs = endTime - startTime;
+      setReactionTime(reactionTimeMs);
+      onAnswer(question.id, reactionTimeMs.toString());
+    } else {
+      setSelectedOption('early');
+      onAnswer(question.id, 'early');
+    }
   };
 
   const handleSubmit = () => {
@@ -138,6 +173,8 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     } else if (question.type === 'pairs') {
       const pairs = Object.entries(pairsSelection).map(([option, answer]) => `${option}:${answer}`);
       onAnswer(question.id, pairs.join(','));
+    } else if (question.type === 'matrix_selection') {
+      onAnswer(question.id, selectedCells.join(','));
     } else {
       onAnswer(question.id, selectedOption);
     }
@@ -151,7 +188,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     }));
   };
 
-  // Если была ошибка загрузки — показываем yandexFallbackUrl, иначе реальное фото из getSafeImageUrl
   const getImageSource = (img: string) => {
     if (imageFallbacks[img]) {
       return yandexFallbackUrl;
@@ -159,7 +195,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
     return getSafeImageUrl(img);
   };
 
-  // Получение эмодзи для текста, если таковой есть
   const getTextWithEmoji = (text: string) => {
     const emoji = EMOJIS[text.toLowerCase()];
     return emoji ? `${text} ${emoji}` : text;
@@ -168,37 +203,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
   const renderQuestionContent = () => {
     switch (question.type) {
       case 'difference':
-        // Первый вопрос теста внимания (полностью изменен)
-        return (
-          <div className="space-y-4">
-            {question.image && (
-              <div className="mb-4">
-                <img 
-                  src={getImageSource(question.image)} 
-                  alt="Основное изображение" 
-                  className="max-w-full h-auto mx-auto"
-                  onError={() => handleImageError(question.image || '')}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              {question.options?.map((option, index) => (
-                <Button
-                  key={index}
-                  variant={selectedOption === option ? "default" : "outline"}
-                  className="h-auto py-3 px-4 flex justify-center items-center"
-                  onClick={() => setSelectedOption(option)}
-                >
-                  <div className="text-center">
-                    {getTextWithEmoji(option)}
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </div>
-        );
-
       case 'count':
       case 'pattern':
       case 'logic':
@@ -261,7 +265,6 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
         );
 
       case 'sequence':
-        // Должен показывать последовательность во время паузы и затем позволять её собирать
         return (
           <div className="text-center py-4">
             {!showAnswer ? (
@@ -311,7 +314,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             )}
           </div>
         );
-        
+
       case 'words':
         return (
           <div className="space-y-4">
@@ -343,7 +346,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             )}
           </div>
         );
-        
+
       case 'images':
         return (
           <div className="space-y-4">
@@ -384,7 +387,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             )}
           </div>
         );
-        
+
       case 'pairs':
         return (
           <div className="space-y-4">
@@ -426,7 +429,7 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             )}
           </div>
         );
-        
+
       case 'matrix':
         return (
           <div className="space-y-4">
@@ -470,7 +473,186 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
             )}
           </div>
         );
-      
+
+      case 'reaction':
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center justify-center min-h-[200px]">
+              {!reactionTime ? (
+                <Button
+                  className={`w-32 h-32 rounded-full transition-colors ${showStimulus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                  onClick={handleReaction}
+                >
+                  {showStimulus ? 'Нажмите!' : 'Ждите...'}
+                </Button>
+              ) : (
+                <div className="text-center">
+                  <p className="text-2xl font-bold">
+                    {selectedOption === 'early' ? 
+                      'Слишком рано!' : 
+                      `Время реакции: ${reactionTime}мс`
+                    }
+                  </p>
+                </div>
+              )}
+              <p className="text-muted-foreground mt-4">
+                {!showStimulus && !reactionTime ? 
+                  "Нажмите на кнопку, когда она станет зеленой" : 
+                  selectedOption === 'early' ? 
+                    "Вы нажали слишком рано. Дождитесь, пока кнопка станет зеленой." :
+                    ""}
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'memory':
+        return (
+          <div className="space-y-4">
+            {!showAnswer ? (
+              <div className="text-center py-4">
+                <p className="text-xl font-bold mb-4">Запомните последовательность:</p>
+                <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
+                  {Array.isArray(question.stimulus) && question.stimulus.map((item, index) => (
+                    <div 
+                      key={index}
+                      className="aspect-square flex items-center justify-center text-2xl font-bold bg-primary text-primary-foreground rounded-lg"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-lg mt-4">Осталось {timeLeft} секунд</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-lg text-center mb-4">Выберите правильную последовательность:</p>
+                <div className="grid grid-cols-1 gap-3">
+                  {question.options?.map((option, index) => (
+                    <Button
+                      key={index}
+                      variant={selectedOption === option ? "default" : "outline"}
+                      className="justify-start h-auto py-3 text-lg"
+                      onClick={() => setSelectedOption(option)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>{index + 1}.</span>
+                        <span>{option}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'matrix_selection':
+        return (
+          <div className="space-y-4">
+            <p className="text-lg mb-2">Отметьте все элементы, которые соответствуют условию:</p>
+            <p className="font-medium mb-4">{question.question_text}</p>
+            
+            <div className="inline-block border-2 border-gray-300 rounded overflow-hidden mx-auto">
+              {question.grid?.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex">
+                  {row.map((cell, colIndex) => {
+                    const cellId = `${rowIndex}-${colIndex}`;
+                    const isSelected = selectedCells.includes(cellId);
+                    
+                    return (
+                      <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className={`border border-gray-300 p-3 text-center min-w-10 cursor-pointer transition-colors
+                          ${isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                        onClick={() => handleCellClick(rowIndex, colIndex)}
+                      >
+                        {cell}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-sm text-muted-foreground mt-2">
+              Нажмите на элементы, чтобы выбрать их. Нажмите повторно, чтобы отменить выбор.
+            </p>
+          </div>
+        );
+
+      case 'cognitive':
+        if (question.question.includes('математическая последовательность')) {
+          return (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-lg font-medium mb-2">Найдите следующее число в последовательности:</p>
+                <div className="flex items-center justify-center gap-4 text-2xl font-bold">
+                  {Array.isArray(question.stimulus) && question.stimulus.map((num, index) => (
+                    <span key={index}>{num}</span>
+                  ))}
+                  <span className="text-primary">?</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                {question.options?.map((option, index) => (
+                  <Button
+                    key={index}
+                    variant={selectedOption === option ? "default" : "outline"}
+                    className="text-lg py-3"
+                    onClick={() => setSelectedOption(option)}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        
+        if (question.question.includes('визуальные аналогии')) {
+          return (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-lg font-medium mb-3">Найдите закономерность и выберите подходящий вариант:</p>
+                
+                {question.image && (
+                  <div className="mb-4">
+                    <img 
+                      src={getImageSource(question.image)} 
+                      alt="Аналогия" 
+                      className="max-w-full h-auto mx-auto"
+                      onError={() => handleImageError(question.image || '')}
+                    />
+                  </div>
+                )}
+                
+                <div className="text-xl font-bold text-center mt-2">
+                  <span>? : ?</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                {question.images?.map((img, index) => (
+                  <div 
+                    key={index} 
+                    className={`border-2 p-2 cursor-pointer rounded-md transition-all ${selectedOption === question.options?.[index] ? 'border-primary ring-2 ring-primary/30' : 'border-gray-200 hover:border-gray-300'}`}
+                    onClick={() => setSelectedOption(question.options?.[index] || '')}
+                  >
+                    <img 
+                      src={getImageSource(img)} 
+                      alt={`Вариант ${index + 1}`} 
+                      className="w-full h-auto"
+                      onError={() => handleImageError(img)}
+                    />
+                    <p className="text-center mt-1">Вариант {index + 1}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
       default:
         return <div className="p-4 text-center">Вопрос этого типа в разработке</div>;
     }
@@ -488,7 +670,11 @@ const TestQuestionComponent: React.FC<TestQuestionProps> = ({ question, onAnswer
       case 'pairs':
         return question.options?.some(option => !pairsSelection[option]) || false;
       case 'sequence':
-        return false; // Для последовательности всегда можно отправить текущий порядок
+        return false;
+      case 'matrix_selection':
+        return selectedCells.length === 0;
+      case 'reaction':
+        return reactionTime === null && !selectedOption;
       default:
         return !selectedOption;
     }

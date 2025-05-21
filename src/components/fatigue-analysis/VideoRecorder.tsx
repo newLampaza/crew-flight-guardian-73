@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Video } from 'lucide-react';
+import { Video, Save, Download } from 'lucide-react';
 
 interface VideoRecorderProps {
   recording: boolean;
@@ -10,6 +10,8 @@ interface VideoRecorderProps {
   analysisResult: any;
   cameraError: string;
   videoRef: React.RefObject<HTMLVideoElement>;
+  recordedBlob?: Blob;
+  saveToHistory?: (blob: Blob) => void;
 }
 
 export const VideoRecorder: React.FC<VideoRecorderProps> = ({
@@ -18,8 +20,31 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
   onStopRecording,
   analysisResult,
   cameraError,
-  videoRef
+  videoRef,
+  recordedBlob,
+  saveToHistory
 }) => {
+  // Function to download recorded video
+  const handleDownloadVideo = () => {
+    if (!recordedBlob) return;
+    
+    const url = URL.createObjectURL(recordedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fatigue-recording-${new Date().getTime()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Function to save the recorded video to database
+  const handleSaveToHistory = () => {
+    if (recordedBlob && saveToHistory) {
+      saveToHistory(recordedBlob);
+    }
+  };
+
   return (
     <div 
       className="p-6 border rounded-lg transition-all duration-200 border-primary bg-primary/5"
@@ -54,6 +79,19 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
           className="w-full rounded-md bg-black aspect-video shadow-lg"
         />
       </div>
+      
+      {recordedBlob && !recording && (
+        <div className="mt-4 flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSaveToHistory} className="flex-1">
+            <Save className="mr-2 h-4 w-4" />
+            Сохранить запись
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadVideo} className="flex-1">
+            <Download className="mr-2 h-4 w-4" />
+            Скачать запись
+          </Button>
+        </div>
+      )}
       
       {cameraError && (
         <div className="mt-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">

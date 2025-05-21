@@ -1,4 +1,3 @@
-
 export interface TestHistory {
   test_id: number;
   test_date: string;
@@ -6,12 +5,29 @@ export interface TestHistory {
   score: number;
   duration: number;
   details: string;
-  cooldown_end?: string; // Добавляем время окончания перезарядки теста
+  cooldown_end?: string;
 }
+
+export type QuestionType = 
+  | 'difference' 
+  | 'count'
+  | 'pattern'
+  | 'logic'
+  | 'math'
+  | 'select'
+  | 'sequence'
+  | 'words'
+  | 'images'
+  | 'pairs'
+  | 'matrix'
+  | 'reaction'
+  | 'memory'
+  | 'matrix_selection'
+  | 'cognitive';
 
 export interface TestQuestion {
   id: string;
-  type: string;
+  type: QuestionType;
   question: string;
   options?: string[];
   image?: string;
@@ -24,13 +40,16 @@ export interface TestQuestion {
   answer_options?: string[];
   question_text?: string;
   animation?: string;
-  multiple_select?: boolean; // Флаг для вопросов с множественным выбором
+  multiple_select?: boolean;
+  time_limit?: number;
 }
 
 export interface TestSession {
   test_id: string;
   questions: TestQuestion[];
+  current_question: number;
   time_limit: number;
+  total_questions: number;
 }
 
 export interface TestResult {
@@ -45,7 +64,7 @@ export interface TestResult {
     error_analysis?: Record<string, number>;
   };
   mistakes: TestMistake[];
-  cooldown_end?: string; // Добавляем время окончания перезарядки теста
+  cooldown_end?: string;
 }
 
 export interface TestMistake {
@@ -59,11 +78,33 @@ export interface TestResultSummary {
   test_id: number;
   total_questions?: number;
   correct_answers?: number;
-  cooldown_end?: string; // Добавляем время окончания перезарядки теста
+  cooldown_end?: string;
 }
 
 export interface QuestionResponse {
   questionId: string;
   answer: string;
   timeTaken?: number;
+}
+
+export interface TestDetails {
+  question_type: string;
+  attempts: number;
+  correct: number;
+  average_time?: number;
+  error_rate?: number;
+}
+
+export interface DetailedTestResult extends TestResult {
+  details: {
+    total_questions: number;
+    correct_answers: number;
+    error_analysis: Record<string, number>;
+    question_details: TestDetails[];
+    average_response_time: number;
+    performance_by_type: Record<string, {
+      accuracy: number;
+      average_time: number;
+    }>;
+  };
 }

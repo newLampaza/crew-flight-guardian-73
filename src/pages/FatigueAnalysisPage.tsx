@@ -32,7 +32,7 @@ import {
   AreaChart
 } from "recharts";
 
-// Import our new components
+// Import our components
 import { VideoRecorder } from "@/components/fatigue-analysis/VideoRecorder";
 import { FlightAnalyzer } from "@/components/fatigue-analysis/FlightAnalyzer";
 import { AnalysisResult } from "@/components/fatigue-analysis/AnalysisResult";
@@ -120,9 +120,11 @@ const FatigueAnalysisPage = () => {
   const { 
     analysisResult, 
     setAnalysisResult, 
+    recordedBlob,
     analysisProgress, 
     submitRecording, 
     analyzeFlight,
+    saveToHistory,
     formatDate
   } = useFatigueAnalysis((result) => {
     // Add the new analysis to the history data when successful
@@ -179,6 +181,10 @@ const FatigueAnalysisPage = () => {
 
   const handleAnalyzeFlight = () => {
     analyzeFlight(lastFlight);
+  };
+  
+  const handleSaveRecording = (blob: Blob) => {
+    saveToHistory(blob);
   };
 
   return (
@@ -392,7 +398,7 @@ const FatigueAnalysisPage = () => {
           </DialogHeader>
           
           <div className="flex flex-col gap-6 p-6 pt-2">
-            {/* Real-time analysis block using our new VideoRecorder component */}
+            {/* Real-time analysis block using our updated VideoRecorder component */}
             <VideoRecorder
               recording={recording}
               onStartRecording={startRecording}
@@ -400,6 +406,8 @@ const FatigueAnalysisPage = () => {
               analysisResult={analysisResult}
               cameraError={cameraError}
               videoRef={videoRef}
+              recordedBlob={recordedBlob || undefined}
+              saveToHistory={handleSaveRecording}
             />
 
             {/* Flight analysis block using our new FlightAnalyzer component */}
@@ -410,7 +418,7 @@ const FatigueAnalysisPage = () => {
             />
           </div>
           
-          {/* Analysis loading overlay using our new AnalysisProgress component */}
+          {/* Analysis loading overlay using our AnalysisProgress component */}
           <AnalysisProgress
             loading={analysisProgress.loading}
             message={analysisProgress.message}

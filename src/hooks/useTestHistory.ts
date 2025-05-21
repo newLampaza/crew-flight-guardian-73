@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { TestHistory, TestResult } from "@/types/cognitivetests";
+import { TestHistory, TestResult, DetailedTestResult } from "@/types/cognitivetests";
 import { cognitiveTestsApi } from "@/api/cognitiveTestsApi";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 export const useTestHistory = () => {
   const [testHistory, setTestHistory] = useState<TestHistory[]>([]);
   const [showResultDetails, setShowResultDetails] = useState(false);
-  const [selectedTestResults, setSelectedTestResults] = useState<TestResult | null>(null);
+  const [selectedTestResults, setSelectedTestResults] = useState<DetailedTestResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
@@ -137,7 +137,7 @@ export const useTestHistory = () => {
       const lastTestId = tests[0].test_id;
       
       const result = await cognitiveTestsApi.getTestResults(lastTestId);
-      setSelectedTestResults(result);
+      setSelectedTestResults(result as DetailedTestResult);
       setShowResultDetails(true);
       setIsLoading(false);
     } catch (error) {

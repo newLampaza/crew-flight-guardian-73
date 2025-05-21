@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { StarRating } from './StarRating';
 import { cn } from '@/lib/utils';
+import { FileVideo, Video } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface AnalysisResultProps {
   analysisResult: {
@@ -27,6 +29,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   onClose,
   onSubmitFeedback
 }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const getFatigueLevel = (level?: string) => {
     switch (level?.toLowerCase()) {
       case 'high': return 'Высокий';
@@ -43,6 +47,33 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       default: return 'text-emerald-500';
     }
   };
+
+  useEffect(() => {
+    if (analysisResult?.video_path) {
+      // Show notification about video location
+      toast({
+        title: "Видео сохранено",
+        description: `Запись доступна по пути: ${analysisResult.video_path}`,
+        variant: "info",
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              navigator.clipboard.writeText(analysisResult.video_path || '');
+              toast({
+                title: "Скопировано",
+                description: "Путь к видео скопирован в буфер обмена",
+                duration: 2000
+              });
+            }}
+          >
+            Копировать
+          </Button>
+        )
+      });
+    }
+  }, [analysisResult?.video_path]);
 
   return (
     <div className="space-y-4">
@@ -102,13 +133,29 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       </div>
 
       {analysisResult.video_path && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Запись:</h4>
-          <video 
-            controls 
-            src={analysisResult.video_path}
-            className="w-full rounded-md bg-black aspect-video"
-          />
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Video className="h-5 w-5 text-primary" />
+            <h4 className="text-sm font-medium">Запись с анализом нейросети:</h4>
+          </div>
+          
+          <div className="relative">
+            <video 
+              ref={videoRef}
+              controls 
+              src={analysisResult.video_path}
+              className="w-full rounded-md bg-black aspect-video"
+            />
+            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+              <FileVideo className="h-3 w-3" />
+              <span>Анализ нейросети</span>
+            </div>
+          </div>
+          
+          <div className="bg-muted/20 p-3 rounded-md border border-dashed text-xs text-muted-foreground">
+            <strong className="block mb-1">Расположение видео:</strong>
+            <code className="break-all">{analysisResult.video_path}</code>
+          </div>
         </div>
       )}
 
