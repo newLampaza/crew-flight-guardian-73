@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS MedicalChecks (
 )
 ''')
 
-# Cognitive Tests table
+# Cognitive Tests table with cooldown_end column added
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS CognitiveTests (
     test_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS CognitiveTests (
     score REAL NOT NULL,
     duration INTEGER NOT NULL,
     details TEXT,
+    cooldown_end TEXT,
     FOREIGN KEY (employee_id) REFERENCES Employees (employee_id)
 )
 ''')

@@ -26,11 +26,30 @@ interface Flight {
 
 const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
 
-// Configure axios instance with proper base URL
+// Configure axios instance with proper base URL and auth token
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true // Enable sending cookies for cross-origin requests
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
+
+// Add authentication token to each request
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('fatigue-guard-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn('No authentication token available for API request');
+    }
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
+  }
+);
 
 export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void) => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -81,8 +100,11 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
       });
 
       console.log('Submitting video to API:', `${API_BASE_URL}/fatigue/analyze`);
+      console.log('Current auth token:', localStorage.getItem('fatigue-guard-token'));
+      
       // Реальный запрос к API
       try {
+        // Используем apiClient с интерсепторами аутентификации
         const response = await apiClient.post('/fatigue/analyze', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -107,11 +129,26 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           setAnalysisResult(response.data);
           if (onSuccess) onSuccess(response.data);
         }
-      } catch (apiError) {
+      } catch (apiError: any) {
         console.error('API Error:', apiError);
+        
+        if (apiError.response?.status === 401) {
+          toast({
+            title: "Ошибка авторизации",
+            description: "Необходимо выполнить вход в систему. Перенаправление на страницу входа...",
+            variant: "destructive"
+          });
+          
+          // Если ошибка авторизации, перенаправляем на страницу входа
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+          return;
+        }
+        
         toast({
           title: "Ошибка соединения с API",
-          description: "Проверьте что сервер запущен на порту 5000. Временно используем демо-данные.",
+          description: `${apiError.message}. Проверьте что сервер запущен на порту 5000. Временно используем демо-данные.`,
           variant: "destructive"
         });
         
@@ -132,7 +169,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           
           toast({
             title: "Демо-режим",
-            description: "API недоступно по адресу " + API_BASE_URL + ". Запустите Flask сервер на порту 5000.",
+            description: "API недоступно. Запустите Flask сервер на порту 5000.",
             variant: "default"
           });
         }, 1000);
@@ -176,18 +213,26 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           description: "Видео успешно сохранено в базе данных"
         });
         return response.data;
-      } catch (apiError) {
+      } catch (apiError: any) {
         console.error('Save API Error:', apiError);
         setAnalysisProgress({loading: false, message: '', percent: 0});
         
+        if (apiError.response?.status === 401) {
+          toast({
+            title: "Ошибка авторизации",
+            description: "Необходимо выполнить вход в систему",
+            variant: "destructive"
+          });
+          return null;
+        }
+        
         toast({
           title: "Ошибка сохранения",
-          description: "API недоступно по адресу " + API_BASE_URL + ". Запустите Flask сервер на порту 5000.",
+          description: `Не удалось сохранить запись: ${apiError.message}`,
           variant: "destructive"
         });
         return null;
       }
-      
       
     } catch (error) {
       setAnalysisProgress({loading: false, message: '', percent: 0});
@@ -229,11 +274,21 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           if (onSuccess) onSuccess(response.data);
           return;
         }
-      } catch (apiError) {
+      } catch (apiError: any) {
         console.error('API Error:', apiError);
+        
+        if (apiError.response?.status === 401) {
+          toast({
+            title: "Ошибка авторизации",
+            description: "Необходимо выполнить вход в систему",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         toast({
           title: "Ошибка соединения с API",
-          description: "Проверьте что сервер запущен на порту 5000. Временно используем демо-данные.",
+          description: `${apiError.message}. Проверьте что сервер запущен на порту 5000. Временно используем демо-данные.`,
           variant: "destructive"
         });
         
@@ -272,7 +327,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
             
             toast({
               title: "Демо-режим",
-              description: "API недоступно по адресу " + API_BASE_URL + ". Запустите Flask сервер на порту 5000.",
+              description: "API недоступно. Запустите Flask сервер на порту 5000.",
               variant: "default"
             });
           }, 500);
@@ -300,4 +355,3 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
     formatDate
   };
 };
-
