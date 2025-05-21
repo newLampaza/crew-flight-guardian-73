@@ -24,6 +24,11 @@ FaceDetection = mp_face_detection.FaceDetection
 class FatigueAnalyzer:
     def __init__(self, model_path: str, buffer_size: int = 15):
         try:
+            # Проверка существования файла модели
+            if not Path(model_path).exists():
+                logger.error(f"Model file not found: {model_path}")
+                raise FileNotFoundError(f"Model file not found: {model_path}")
+                
             self.model = tf.keras.models.load_model(model_path)
             logger.info(f"Model loaded successfully from {model_path}")
         except Exception as e:
@@ -39,6 +44,10 @@ class FatigueAnalyzer:
     def process_frame(self, frame: np.ndarray) -> np.ndarray:
         if frame is None:
             logger.error("Received None frame")
+            return np.zeros((300, 300, 3), dtype=np.uint8)
+        
+        if frame.size == 0 or len(frame.shape) < 3:
+            logger.error(f"Invalid frame format: shape={frame.shape if hasattr(frame, 'shape') else 'unknown'}")
             return np.zeros((300, 300, 3), dtype=np.uint8)
             
         try:
@@ -77,6 +86,10 @@ class FatigueAnalyzer:
             else:
                 if time.time() - self.last_face_time > 2:
                     self._update_buffer(1.0)  # Если лицо не найдено долго, считаем что человек устал/отвлекся
+                    # Добавляем текст для информирования
+                    h, w = frame.shape[:2]
+                    cv2.putText(frame, "No face detected", (w//2-100, h//2),
+                              cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
             return frame
         except Exception as e:
@@ -85,6 +98,10 @@ class FatigueAnalyzer:
 
     def _preprocess_face(self, face: np.ndarray) -> np.ndarray:
         try:
+            if face is None or face.size == 0:
+                logger.error("Empty face region for preprocessing")
+                return np.zeros((48, 48, 3), dtype=np.float32)
+                
             face = cv2.resize(face, (48, 48))
             return face.astype(np.float32) / 255.0
         except Exception as e:
@@ -120,7 +137,14 @@ class FatigueAnalyzer:
 def analyze_source(source, is_video_file=False, output_file=None):
     try:
         logger.info(f"Starting analysis of {'video file' if is_video_file else 'camera'}")
-        analyzer = FatigueAnalyzer('neural_network/data/models/fatigue_model.keras')
+        
+        # Проверяем, существует ли файл модели
+        model_path = 'neural_network/data/models/fatigue_model.keras'
+        if not Path(model_path).exists():
+            logger.error(f"Model file not found: {model_path}")
+            return "Error", 0
+            
+        analyzer = FatigueAnalyzer(model_path)
         
         # Проверяем существование источника
         if is_video_file and not Path(source).exists():

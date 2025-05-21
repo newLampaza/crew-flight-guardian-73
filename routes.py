@@ -169,19 +169,35 @@ def analyze_fatigue():
         video_file.save(filepath)
         print(f"Video saved to {filepath}")
         
+        # Проверяем, существует ли файл после сохранения
+        if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+            return jsonify({'message': 'Failed to save video file or file is empty'}), 500
+            
         # Конвертируем webm в mp4 для лучшей совместимости с OpenCV
         converted_filename = f"converted_{filename.replace('.webm', '.mp4')}"
         converted_filepath = os.path.join(UPLOAD_FOLDER, converted_filename)
         
-        # Используем ffmpeg для конвертации (предполагается, что ffmpeg установлен)
-        cmd = f"ffmpeg -y -i {filepath} -c:v libx264 -preset ultrafast {converted_filepath}"
-        ret = os.system(cmd)
+        # Проверяем наличие ffmpeg
+        import subprocess
+        try:
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return jsonify({'message': 'ffmpeg not found. Required for video conversion'}), 500
         
-        if ret != 0:
-            print(f"Conversion failed with code {ret}")
-            return jsonify({'message': 'Video conversion failed'}), 500
+        # Используем ffmpeg для конвертации
+        cmd = f"ffmpeg -y -i {filepath} -c:v libx264 -preset ultrafast {converted_filepath}"
+        process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        if process.returncode != 0:
+            error_msg = process.stderr.decode('utf-8')
+            print(f"Conversion failed: {error_msg}")
+            return jsonify({'message': f'Video conversion failed: {error_msg[:200]}...'}), 500
             
         print(f"Video converted to {converted_filepath}")
+        
+        # Проверяем, существует ли конвертированный файл
+        if not os.path.exists(converted_filepath) or os.path.getsize(converted_filepath) == 0:
+            return jsonify({'message': 'Converted video file is missing or empty'}), 500
         
         # Анализируем видео с помощью нашей модели усталости
         try:
@@ -218,6 +234,10 @@ def analyze_fatigue():
             
             # Закрываем видео файл
             video.release()
+            
+            # Проверяем, есть ли результаты анализа
+            if not fatigue_scores:
+                return jsonify({'message': 'No faces detected in video'}), 400
             
             # Получаем окончательный результат анализа
             result = analyzer.get_final_score()
@@ -273,16 +293,33 @@ def save_recording():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         video_file.save(filepath)
         
+        # Проверяем, существует ли файл после сохранения
+        if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+            return jsonify({'message': 'Failed to save video file or file is empty'}), 500
+        
         # Конвертируем в mp4
         converted_filename = f"converted_{filename.replace('.webm', '.mp4')}"
         converted_filepath = os.path.join(UPLOAD_FOLDER, converted_filename)
         
+        # Проверяем наличие ffmpeg
+        import subprocess
+        try:
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return jsonify({'message': 'ffmpeg not found. Required for video conversion'}), 500
+        
         # Используем ffmpeg для конвертации
         cmd = f"ffmpeg -y -i {filepath} -c:v libx264 -preset ultrafast {converted_filepath}"
-        ret = os.system(cmd)
+        process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        if ret != 0:
-            return jsonify({'message': 'Video conversion failed'}), 500
+        if process.returncode != 0:
+            error_msg = process.stderr.decode('utf-8')
+            print(f"Conversion failed: {error_msg}")
+            return jsonify({'message': f'Video conversion failed: {error_msg[:200]}...'}), 500
+        
+        # Проверяем, существует ли конвертированный файл
+        if not os.path.exists(converted_filepath) or os.path.getsize(converted_filepath) == 0:
+            return jsonify({'message': 'Converted video file is missing or empty'}), 500
         
         # Сохраняем запись в БД
         conn = get_db_connection()
@@ -304,6 +341,8 @@ def save_recording():
         
     except Exception as e:
         print(f"Save recording error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'message': f'Error saving recording: {str(e)}'}), 500
 
 # Маршрут для анализа последнего рейса
