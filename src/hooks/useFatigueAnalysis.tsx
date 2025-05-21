@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import axios from 'axios';
@@ -73,6 +72,11 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
 
   const submitRecording = async (blob: Blob) => {
     try {
+      // Validate the blob before proceeding
+      if (!blob || blob.size === 0) {
+        throw new Error('Записанное видео слишком короткое или повреждено');
+      }
+      
       setRecordedBlob(blob);
       setAnalysisProgress({
         loading: true,
@@ -84,12 +88,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
 
       setAnalysisProgress(p => ({...p, percent: 40, message: 'Загрузка на сервер...'}));
 
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (!blob || blob.size === 0) {
-        throw new Error('Записанное видео слишком короткое или повреждено');
-      }
-
+      // Prepare form data with the video blob
       const formData = new FormData();
       formData.append('video', blob, `recording_${Date.now()}.webm`);
 
@@ -100,11 +99,11 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
       });
 
       console.log('Submitting video to API:', `${API_BASE_URL}/fatigue/analyze`);
-      console.log('Current auth token:', localStorage.getItem('fatigue-guard-token'));
+      console.log('Video blob size:', blob.size);
+      console.log('Video blob type:', blob.type);
       
-      // Реальный запрос к API
       try {
-        // Используем apiClient с интерсепторами аутентификации
+        // Use verbose error handling for better debugging
         const response = await apiClient.post('/fatigue/analyze', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -131,6 +130,8 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
         }
       } catch (apiError: any) {
         console.error('API Error:', apiError);
+        console.error('Error details:', apiError.response?.data || 'No response data');
+        console.error('Status code:', apiError.response?.status);
         
         if (apiError.response?.status === 401) {
           toast({
@@ -146,11 +147,22 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           return;
         }
         
-        toast({
-          title: "Ошибка соединения с API",
-          description: `${apiError.message}. Проверьте что сервер запущен на порту 5000. Временно используем демо-данные.`,
-          variant: "destructive"
-        });
+        // Check if server is running
+        const isServerRunning = await checkServerStatus();
+        
+        if (!isServerRunning) {
+          toast({
+            title: "Сервер недоступен",
+            description: "Сервер Python на порту 5000 не запущен или не отвечает. Запустите файл run.py",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Ошибка соединения с API",
+            description: `${apiError.message || 'Неизвестная ошибка'}. Проверьте консоль для деталей. Временно используем демо-данные.`,
+            variant: "destructive"
+          });
+        }
         
         // Фолбек - генерируем результат для демо, если API недоступен
         setTimeout(() => {
@@ -169,7 +181,7 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
           
           toast({
             title: "Демо-режим",
-            description: "API недоступно. Запустите Flask сервер на порту 5000.",
+            description: "API недоступно. Запустите Python сервер через файл run.py",
             variant: "default"
           });
         }, 1000);
@@ -182,6 +194,16 @@ export const useFatigueAnalysis = (onSuccess?: (result: AnalysisResult) => void)
         description: error instanceof Error ? error.message : "Неизвестная ошибка",
         variant: "destructive"
       });
+    }
+  };
+
+  // New helper function to check if server is running
+  const checkServerStatus = async (): Promise<boolean> => {
+    try {
+      await axios.get(`${API_BASE_URL}/status`, { timeout: 2000 });
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
